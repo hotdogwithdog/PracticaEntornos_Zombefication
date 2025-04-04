@@ -69,9 +69,6 @@ public class CameraSwitcher : MonoBehaviour
             // Calcula la posición y rotación para la vista de tercera persona
             targetPosition = mainCamera.transform.position - Vector3.up * topDownHeight;
             targetRotation = Quaternion.Euler(0, mainCamera.transform.eulerAngles.y, 0);
-
-            // Reactiva el script CameraController
-            EnableCameraController(true);
         }
 
         // Inicia la transición
@@ -85,6 +82,7 @@ public class CameraSwitcher : MonoBehaviour
             targetPosition,
             Time.deltaTime * transitionSpeed
         );
+        Debug.Log($"mainCamera position: {mainCamera.transform.position}");
 
         mainCamera.transform.rotation = Quaternion.Slerp(
             mainCamera.transform.rotation,
@@ -96,6 +94,11 @@ public class CameraSwitcher : MonoBehaviour
         if (Vector3.Distance(mainCamera.transform.position, targetPosition) < 0.1f)
         {
             isTransitioning = false; // Finaliza la transición
+            if (cameraController != null && !isTopDownView)
+            {
+                // Reactiva el script CameraController
+                EnableCameraController(true);
+            }
         }
     }
 
