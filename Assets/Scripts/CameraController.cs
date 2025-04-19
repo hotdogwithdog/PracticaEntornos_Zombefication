@@ -1,17 +1,42 @@
+using System;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Composites;
+using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.Processors;
 
 public class CameraController : MonoBehaviour
 {
     public Transform player;            // Referencia al jugador
     public Vector3 offset = new Vector3(0f, 2f, -5f);  // Desplazamiento desde el jugador
-    public float rotationSpeed = 5f;    // Velocidad de rotación
-    public float pitchSpeed = 2f;       // Velocidad de inclinación (eje Y)
+    public float rotationSpeed = 2.5f;    // Velocidad de rotación
+    public float pitchSpeed = 1f;       // Velocidad de inclinación (eje Y)
     public float minPitch = -20f;       // Ángulo mínimo de inclinación
     public float maxPitch = 50f;        // Ángulo máximo de inclinación
 
     private float yaw = 0f;             // Rotación alrededor del eje Y
     private float pitch = 2f;           // Inclinación hacia arriba/abajo (eje X)
-    
+
+    private input.Actions _actions;
+    private InputAction _cameraMove;
+
+    private void Awake()
+    {
+        _actions = new input.Actions();
+        _cameraMove = _actions.FindAction("CameraMove");
+    }
+
+    private void OnEnable()
+    {
+        _actions.Enable();
+    }
+
+    private void OnDisable()
+    {
+        _actions.Disable();
+    }
+
     void LateUpdate()
     {
         if (player == null)
@@ -26,9 +51,11 @@ public class CameraController : MonoBehaviour
 
     private void HandleCameraRotation()
     {
-        // Obtener la entrada del ratón para la rotación de la cámara
-        float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
-        float mouseY = Input.GetAxis("Mouse Y") * pitchSpeed;
+        Vector2 mouseMove = _cameraMove.ReadValue<Vector2>();
+        mouseMove /= 10; // To reduce the scale a little
+        float mouseX = mouseMove.x * rotationSpeed;
+        float mouseY =  mouseMove.y * pitchSpeed;
+
 
         // Modificar los ángulos de rotación (yaw y pitch)
         yaw += mouseX;
