@@ -11,7 +11,7 @@ public class CameraController : MonoBehaviour
 
     private float yaw = 0f;             // Rotación alrededor del eje Y
     private float pitch = 2f;           // Inclinación hacia arriba/abajo (eje X)
-
+    
     void LateUpdate()
     {
         if (player == null)
@@ -19,7 +19,7 @@ public class CameraController : MonoBehaviour
             Debug.LogWarning("Player reference is missing.");
             return;
         }
-
+    
         HandleCameraRotation();
         UpdateCameraPosition();
     }

@@ -156,6 +156,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CoinsCollected: 0
+  isZombie: 0
+  uniqueID: 
   moveSpeed: 5
+  zombieSpeedModifier: 0.8
   animator: {fileID: 370896438650836429}
   cameraTransform: {fileID: 0}
