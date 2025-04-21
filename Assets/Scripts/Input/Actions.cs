@@ -118,7 +118,7 @@ namespace input
                 {
                     ""name"": ""WASD"",
                     ""id"": ""e17a5ba4-6b0f-4a9c-8dd2-02f9cb540426"",
-                    ""path"": ""2DVector"",
+                    ""path"": ""2DVector(mode=2)"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
