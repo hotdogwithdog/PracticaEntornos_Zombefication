@@ -16,8 +16,7 @@ namespace UI.Menu.States
                     Debug.Log("Looby clicked");
                     break;
                 case MenuButtons.Options:
-                    //MenuManager.Instance.SetState(new Options());
-                    Debug.Log("Options clicked");
+                    MenuManager.Instance.SetState(new Options());
                     break;
                 case MenuButtons.Credits:
                     //MenuManager.Instance.SetState(new Credits());
