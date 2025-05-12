@@ -2,7 +2,6 @@ using input;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using static UnityEditor.SceneView;
 
 namespace Player
 {
