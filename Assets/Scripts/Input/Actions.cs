@@ -15,7 +15,7 @@ using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Utilities;
 
-namespace input
+namespace GameInput
 {
     public partial class @Actions: IInputActionCollection2, IDisposable
     {
@@ -31,7 +31,7 @@ namespace input
             ""actions"": [
                 {
                     ""name"": ""CameraMove"",
-                    ""type"": ""PassThrough"",
+                    ""type"": ""Value"",
                     ""id"": ""8964b8a7-b409-40d9-8224-69675f04c2ec"",
                     ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
@@ -40,7 +40,7 @@ namespace input
                 },
                 {
                     ""name"": ""Move"",
-                    ""type"": ""PassThrough"",
+                    ""type"": ""Value"",
                     ""id"": ""9b99290d-ad07-4624-b5cc-ff7e94411c9d"",
                     ""expectedControlType"": ""Vector2"",
                     ""processors"": """",
@@ -54,7 +54,7 @@ namespace input
                     ""id"": ""b211cbd7-e9f2-4cd9-8d66-99ec1984a345"",
                     ""path"": ""2DVector(mode=2)"",
                     ""interactions"": """",
-                    ""processors"": """",
+                    ""processors"": ""ScaleVector2(x=0.1,y=0.1)"",
                     ""groups"": """",
                     ""action"": ""CameraMove"",
                     ""isComposite"": true,
@@ -182,6 +182,74 @@ namespace input
                     ""isPartOfComposite"": false
                 }
             ]
+        },
+        {
+            ""name"": ""Cheats"",
+            ""id"": ""468e2a6e-a523-4fbf-bed7-8d1634112cdf"",
+            ""actions"": [
+                {
+                    ""name"": ""CameraSwitch"",
+                    ""type"": ""Button"",
+                    ""id"": ""a8634c16-1d36-404c-88c9-41fff117fd98"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""HumanConvert"",
+                    ""type"": ""Button"",
+                    ""id"": ""11094ef0-1e40-4e78-8fc0-1258680e86bb"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ZombieConvert"",
+                    ""type"": ""Button"",
+                    ""id"": ""aa1a194e-05d4-4a2c-b8de-9cdc00077e58"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                }
+            ],
+            ""bindings"": [
+                {
+                    ""name"": """",
+                    ""id"": ""273d9a92-0e6b-4263-9adc-e5a3da7f4538"",
+                    ""path"": ""<Keyboard>/c"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""CameraSwitch"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""cb76759d-e80f-417b-96a8-424aa7d5c414"",
+                    ""path"": ""<Keyboard>/h"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""HumanConvert"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""512301f1-d63a-493e-bb09-2973802ac03c"",
+                    ""path"": ""<Keyboard>/z"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ZombieConvert"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                }
+            ]
         }
     ],
     ""controlSchemes"": [
@@ -207,6 +275,11 @@ namespace input
             m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
             m_Player_CameraMove = m_Player.FindAction("CameraMove", throwIfNotFound: true);
             m_Player_Move = m_Player.FindAction("Move", throwIfNotFound: true);
+            // Cheats
+            m_Cheats = asset.FindActionMap("Cheats", throwIfNotFound: true);
+            m_Cheats_CameraSwitch = m_Cheats.FindAction("CameraSwitch", throwIfNotFound: true);
+            m_Cheats_HumanConvert = m_Cheats.FindAction("HumanConvert", throwIfNotFound: true);
+            m_Cheats_ZombieConvert = m_Cheats.FindAction("ZombieConvert", throwIfNotFound: true);
         }
 
         public void Dispose()
@@ -318,6 +391,68 @@ namespace input
             }
         }
         public PlayerActions @Player => new PlayerActions(this);
+
+        // Cheats
+        private readonly InputActionMap m_Cheats;
+        private List<ICheatsActions> m_CheatsActionsCallbackInterfaces = new List<ICheatsActions>();
+        private readonly InputAction m_Cheats_CameraSwitch;
+        private readonly InputAction m_Cheats_HumanConvert;
+        private readonly InputAction m_Cheats_ZombieConvert;
+        public struct CheatsActions
+        {
+            private @Actions m_Wrapper;
+            public CheatsActions(@Actions wrapper) { m_Wrapper = wrapper; }
+            public InputAction @CameraSwitch => m_Wrapper.m_Cheats_CameraSwitch;
+            public InputAction @HumanConvert => m_Wrapper.m_Cheats_HumanConvert;
+            public InputAction @ZombieConvert => m_Wrapper.m_Cheats_ZombieConvert;
+            public InputActionMap Get() { return m_Wrapper.m_Cheats; }
+            public void Enable() { Get().Enable(); }
+            public void Disable() { Get().Disable(); }
+            public bool enabled => Get().enabled;
+            public static implicit operator InputActionMap(CheatsActions set) { return set.Get(); }
+            public void AddCallbacks(ICheatsActions instance)
+            {
+                if (instance == null || m_Wrapper.m_CheatsActionsCallbackInterfaces.Contains(instance)) return;
+                m_Wrapper.m_CheatsActionsCallbackInterfaces.Add(instance);
+                @CameraSwitch.started += instance.OnCameraSwitch;
+                @CameraSwitch.performed += instance.OnCameraSwitch;
+                @CameraSwitch.canceled += instance.OnCameraSwitch;
+                @HumanConvert.started += instance.OnHumanConvert;
+                @HumanConvert.performed += instance.OnHumanConvert;
+                @HumanConvert.canceled += instance.OnHumanConvert;
+                @ZombieConvert.started += instance.OnZombieConvert;
+                @ZombieConvert.performed += instance.OnZombieConvert;
+                @ZombieConvert.canceled += instance.OnZombieConvert;
+            }
+
+            private void UnregisterCallbacks(ICheatsActions instance)
+            {
+                @CameraSwitch.started -= instance.OnCameraSwitch;
+                @CameraSwitch.performed -= instance.OnCameraSwitch;
+                @CameraSwitch.canceled -= instance.OnCameraSwitch;
+                @HumanConvert.started -= instance.OnHumanConvert;
+                @HumanConvert.performed -= instance.OnHumanConvert;
+                @HumanConvert.canceled -= instance.OnHumanConvert;
+                @ZombieConvert.started -= instance.OnZombieConvert;
+                @ZombieConvert.performed -= instance.OnZombieConvert;
+                @ZombieConvert.canceled -= instance.OnZombieConvert;
+            }
+
+            public void RemoveCallbacks(ICheatsActions instance)
+            {
+                if (m_Wrapper.m_CheatsActionsCallbackInterfaces.Remove(instance))
+                    UnregisterCallbacks(instance);
+            }
+
+            public void SetCallbacks(ICheatsActions instance)
+            {
+                foreach (var item in m_Wrapper.m_CheatsActionsCallbackInterfaces)
+                    UnregisterCallbacks(item);
+                m_Wrapper.m_CheatsActionsCallbackInterfaces.Clear();
+                AddCallbacks(instance);
+            }
+        }
+        public CheatsActions @Cheats => new CheatsActions(this);
         private int m_keyboardAndMouseSchemeIndex = -1;
         public InputControlScheme keyboardAndMouseScheme
         {
@@ -331,6 +466,12 @@ namespace input
         {
             void OnCameraMove(InputAction.CallbackContext context);
             void OnMove(InputAction.CallbackContext context);
+        }
+        public interface ICheatsActions
+        {
+            void OnCameraSwitch(InputAction.CallbackContext context);
+            void OnHumanConvert(InputAction.CallbackContext context);
+            void OnZombieConvert(InputAction.CallbackContext context);
         }
     }
 }

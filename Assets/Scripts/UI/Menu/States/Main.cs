@@ -1,5 +1,7 @@
 ﻿using UnityEditor;
+using UnityEditor.SearchService;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace UI.Menu.States
 {
@@ -12,16 +14,13 @@ namespace UI.Menu.States
             switch (option)
             {
                 case MenuButtons.Lobby:
-                    //MenuManager.Instance.SetState(new MapSelector());
-                    Debug.Log("Looby clicked");
+                    SceneManager.LoadScene("GameScene");
                     break;
                 case MenuButtons.Options:
-                    //MenuManager.Instance.SetState(new Options());
-                    Debug.Log("Options clicked");
+                    MenuManager.Instance.SetState(new Options());
                     break;
                 case MenuButtons.Credits:
-                    //MenuManager.Instance.SetState(new Credits());
-                    Debug.Log("Credits clicked");
+                    MenuManager.Instance.SetState(new Credits());
                     break;
                 case MenuButtons.Exit:
 #if UNITY_EDITOR

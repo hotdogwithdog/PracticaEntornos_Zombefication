@@ -1,10 +1,4 @@
-using System;
 using UnityEngine;
-using UnityEngine.Animations;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Composites;
-using UnityEngine.InputSystem.Controls;
-using UnityEngine.InputSystem.Processors;
 
 namespace Player
 {
@@ -20,23 +14,15 @@ namespace Player
         private float yaw = 0f;             // Rotación alrededor del eje Y
         private float pitch = 2f;           // Inclinación hacia arriba/abajo (eje X)
 
-        private input.Actions _actions;
-        private InputAction _cameraMove;
-
-        private void Awake()
-        {
-            _actions = new input.Actions();
-            _cameraMove = _actions.FindAction("CameraMove");
-        }
+        private Vector2 _cameraMove = Vector2.zero;
 
         private void OnEnable()
         {
-            _actions.Enable();
+            GameInput.InputReader.Instance.onCameraMove += CameraMove;
         }
-
         private void OnDisable()
         {
-            _actions.Disable();
+            GameInput.InputReader.Instance.onCameraMove -= CameraMove;
         }
 
         void LateUpdate()
@@ -51,12 +37,16 @@ namespace Player
             UpdateCameraPosition();
         }
 
+        private void CameraMove(Vector2 cameraPos)
+        {
+            _cameraMove = cameraPos;
+        }
+
         private void HandleCameraRotation()
         {
-            Vector2 mouseMove = _cameraMove.ReadValue<Vector2>();
-            mouseMove /= 10; // To reduce the scale a little
-            float mouseX = mouseMove.x * rotationSpeed;
-            float mouseY = mouseMove.y * pitchSpeed;
+            //_cameraMove /= 10; // To reduce the scale a little
+            float mouseX = _cameraMove.x * rotationSpeed;
+            float mouseY = _cameraMove.y * pitchSpeed;
 
 
             // Modificar los ángulos de rotación (yaw y pitch)

@@ -5,7 +5,6 @@ namespace Player
     public class CameraSwitcher : MonoBehaviour
     {
         public Camera mainCamera; // La cámara principal
-        public KeyCode switchKey = KeyCode.C; // Tecla para alternar la vista
         public float transitionSpeed = 2f; // Velocidad de la transición
         public float topDownHeight = 20f; // Altura para la vista cenital
         public float topDownRotation = 90f; // Rotación para la vista cenital (mirando hacia abajo)
@@ -34,14 +33,19 @@ namespace Player
             }
         }
 
+        private void OnEnable()
+        {
+            GameInput.InputReader.Instance.onCameraSwitch += ToggleCameraView;
+        }
+
+        private void OnDisable()
+        {
+            GameInput.InputReader.Instance.onCameraSwitch -= ToggleCameraView;
+        }
+
         void LateUpdate()
         {
             if (mainCamera == null) return;
-
-            if (Input.GetKeyDown(switchKey) && !isTransitioning)
-            {
-                ToggleCameraView();
-            }
 
             if (isTransitioning)
             {
@@ -51,6 +55,8 @@ namespace Player
 
         private void ToggleCameraView()
         {
+            if (isTransitioning) return;
+
             isTopDownView = !isTopDownView;
 
             if (isTopDownView)

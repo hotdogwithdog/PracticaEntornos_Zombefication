@@ -1,4 +1,5 @@
-using input;
+using GameInput;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -25,9 +26,6 @@ namespace Player
         private float horizontalInput;         // Entrada horizontal (A/D o flechas)
         private float verticalInput;           // Entrada vertical (W/S o flechas)
 
-        private Actions _actions;
-        private InputAction _moveAction;
-
         void Start()
         {
             // Buscar el objeto "CanvasPlayer" en la escena
@@ -53,30 +51,24 @@ namespace Player
             UpdateCoinUI();
         }
 
-        private void Awake()
-        {
-            _actions = new input.Actions();
-            _moveAction = _actions.FindAction("Move");
-        }
-
         private void OnEnable()
         {
-            _actions.Enable();
+            GameInput.InputReader.Instance.onMove += MoveInput;
         }
 
         private void OnDisable()
         {
-            _actions.Disable();
+            GameInput.InputReader.Instance.onMove -= MoveInput;
+        }
+
+        private void MoveInput(Vector2 movement)
+        {
+            horizontalInput = movement.x;
+            verticalInput = movement.y;
         }
 
         void Update()
         {
-            // Leer entrada del teclado
-            Vector2 input = _moveAction.ReadValue<Vector2>();
-            Debug.Log(input);
-            horizontalInput = input.x;
-            verticalInput = input.y;
-
             // Mover el jugador
             MovePlayer();
 
