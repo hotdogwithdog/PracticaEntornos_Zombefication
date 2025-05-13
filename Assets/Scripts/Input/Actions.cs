@@ -197,9 +197,18 @@ namespace GameInput
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""HumanZombieSwitch"",
+                    ""name"": ""HumanConvert"",
                     ""type"": ""Button"",
                     ""id"": ""11094ef0-1e40-4e78-8fc0-1258680e86bb"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""ZombieConvert"",
+                    ""type"": ""Button"",
+                    ""id"": ""aa1a194e-05d4-4a2c-b8de-9cdc00077e58"",
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
@@ -225,7 +234,18 @@ namespace GameInput
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""HumanZombieSwitch"",
+                    ""action"": ""HumanConvert"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""512301f1-d63a-493e-bb09-2973802ac03c"",
+                    ""path"": ""<Keyboard>/z"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""ZombieConvert"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -258,7 +278,8 @@ namespace GameInput
             // Cheats
             m_Cheats = asset.FindActionMap("Cheats", throwIfNotFound: true);
             m_Cheats_CameraSwitch = m_Cheats.FindAction("CameraSwitch", throwIfNotFound: true);
-            m_Cheats_HumanZombieSwitch = m_Cheats.FindAction("HumanZombieSwitch", throwIfNotFound: true);
+            m_Cheats_HumanConvert = m_Cheats.FindAction("HumanConvert", throwIfNotFound: true);
+            m_Cheats_ZombieConvert = m_Cheats.FindAction("ZombieConvert", throwIfNotFound: true);
         }
 
         public void Dispose()
@@ -375,13 +396,15 @@ namespace GameInput
         private readonly InputActionMap m_Cheats;
         private List<ICheatsActions> m_CheatsActionsCallbackInterfaces = new List<ICheatsActions>();
         private readonly InputAction m_Cheats_CameraSwitch;
-        private readonly InputAction m_Cheats_HumanZombieSwitch;
+        private readonly InputAction m_Cheats_HumanConvert;
+        private readonly InputAction m_Cheats_ZombieConvert;
         public struct CheatsActions
         {
             private @Actions m_Wrapper;
             public CheatsActions(@Actions wrapper) { m_Wrapper = wrapper; }
             public InputAction @CameraSwitch => m_Wrapper.m_Cheats_CameraSwitch;
-            public InputAction @HumanZombieSwitch => m_Wrapper.m_Cheats_HumanZombieSwitch;
+            public InputAction @HumanConvert => m_Wrapper.m_Cheats_HumanConvert;
+            public InputAction @ZombieConvert => m_Wrapper.m_Cheats_ZombieConvert;
             public InputActionMap Get() { return m_Wrapper.m_Cheats; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -394,9 +417,12 @@ namespace GameInput
                 @CameraSwitch.started += instance.OnCameraSwitch;
                 @CameraSwitch.performed += instance.OnCameraSwitch;
                 @CameraSwitch.canceled += instance.OnCameraSwitch;
-                @HumanZombieSwitch.started += instance.OnHumanZombieSwitch;
-                @HumanZombieSwitch.performed += instance.OnHumanZombieSwitch;
-                @HumanZombieSwitch.canceled += instance.OnHumanZombieSwitch;
+                @HumanConvert.started += instance.OnHumanConvert;
+                @HumanConvert.performed += instance.OnHumanConvert;
+                @HumanConvert.canceled += instance.OnHumanConvert;
+                @ZombieConvert.started += instance.OnZombieConvert;
+                @ZombieConvert.performed += instance.OnZombieConvert;
+                @ZombieConvert.canceled += instance.OnZombieConvert;
             }
 
             private void UnregisterCallbacks(ICheatsActions instance)
@@ -404,9 +430,12 @@ namespace GameInput
                 @CameraSwitch.started -= instance.OnCameraSwitch;
                 @CameraSwitch.performed -= instance.OnCameraSwitch;
                 @CameraSwitch.canceled -= instance.OnCameraSwitch;
-                @HumanZombieSwitch.started -= instance.OnHumanZombieSwitch;
-                @HumanZombieSwitch.performed -= instance.OnHumanZombieSwitch;
-                @HumanZombieSwitch.canceled -= instance.OnHumanZombieSwitch;
+                @HumanConvert.started -= instance.OnHumanConvert;
+                @HumanConvert.performed -= instance.OnHumanConvert;
+                @HumanConvert.canceled -= instance.OnHumanConvert;
+                @ZombieConvert.started -= instance.OnZombieConvert;
+                @ZombieConvert.performed -= instance.OnZombieConvert;
+                @ZombieConvert.canceled -= instance.OnZombieConvert;
             }
 
             public void RemoveCallbacks(ICheatsActions instance)
@@ -441,7 +470,8 @@ namespace GameInput
         public interface ICheatsActions
         {
             void OnCameraSwitch(InputAction.CallbackContext context);
-            void OnHumanZombieSwitch(InputAction.CallbackContext context);
+            void OnHumanConvert(InputAction.CallbackContext context);
+            void OnZombieConvert(InputAction.CallbackContext context);
         }
     }
 }

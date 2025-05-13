@@ -64,6 +64,18 @@ namespace Level
 
         #region Unity game loop methods
 
+        private void OnEnable()
+        {
+            GameInput.InputReader.Instance.onHumanConvert += OnHumanConvert;
+            GameInput.InputReader.Instance.onZombieConvert += OnZombieConvert;
+        }
+
+        private void OnDisable()
+        {
+            GameInput.InputReader.Instance.onHumanConvert -= OnHumanConvert;
+            GameInput.InputReader.Instance.onZombieConvert -= OnZombieConvert;
+        }
+
         private void Awake()
         {
             Debug.Log("Despertando el nivel");
@@ -141,32 +153,6 @@ namespace Level
                 HandleCoinBasedGameMode();
             }
 
-            if (Input.GetKeyDown(KeyCode.Z)) // Presiona "Z" para convertirte en Zombie
-            {
-                // Comprobar si el jugador actual está usando el prefab de humano
-                GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
-                if (currentPlayer != null && currentPlayer.name.Contains(playerPrefab.name))
-                {
-                    ChangeToZombie();
-                }
-                else
-                {
-                    Debug.Log("El jugador actual no es un humano.");
-                }
-            }
-            else if (Input.GetKeyDown(KeyCode.H)) // Presiona "H" para convertirte en Humano
-            {
-                // Comprobar si el jugador actual está usando el prefab de zombie
-                GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
-                if (currentPlayer != null && currentPlayer.name.Contains(zombiePrefab.name))
-                {
-                    ChangeToHuman();
-                }
-                else
-                {
-                    Debug.Log("El jugador actual no es un zombie.");
-                }
-            }
             UpdateTeamUI();
 
             if (isGameOver)
@@ -178,6 +164,20 @@ namespace Level
         #endregion
 
         #region Team management methods
+
+        private void OnZombieConvert()
+        {
+            // Comprobar si el jugador actual está usando el prefab de humano
+            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (currentPlayer != null && currentPlayer.name.Contains(playerPrefab.name))
+            {
+                ChangeToZombie();
+            }
+            else
+            {
+                Debug.Log("El jugador actual no es un humano.");
+            }
+        }
 
         private void ChangeToZombie()
         {
@@ -250,6 +250,19 @@ namespace Level
             }
         }
 
+        private void OnHumanConvert()
+        {
+            // Comprobar si el jugador actual está usando el prefab de zombie
+            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+            if (currentPlayer != null && currentPlayer.name.Contains(zombiePrefab.name))
+            {
+                ChangeToHuman();
+            }
+            else
+            {
+                Debug.Log("El jugador actual no es un zombie.");
+            }
+        }
         private void ChangeToHuman()
         {
             Debug.Log("Cambiando a Humano");

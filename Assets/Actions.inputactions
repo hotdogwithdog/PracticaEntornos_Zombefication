@@ -173,9 +173,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "HumanZombieSwitch",
+                    "name": "HumanConvert",
                     "type": "Button",
                     "id": "11094ef0-1e40-4e78-8fc0-1258680e86bb",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ZombieConvert",
+                    "type": "Button",
+                    "id": "aa1a194e-05d4-4a2c-b8de-9cdc00077e58",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "",
@@ -201,7 +210,18 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "HumanZombieSwitch",
+                    "action": "HumanConvert",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "512301f1-d63a-493e-bb09-2973802ac03c",
+                    "path": "<Keyboard>/z",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ZombieConvert",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

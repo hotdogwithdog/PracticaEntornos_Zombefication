@@ -17,7 +17,8 @@ namespace GameInput
 
         #region CheatsMapDelegates
         public Action onCameraSwitch = delegate { };
-        public Action onHumanZombieSwitch = delegate { };
+        public Action onHumanConvert = delegate { };
+        public Action onZombieConvert = delegate { };
         #endregion
 
         #region EnablersAndDisablers
@@ -81,12 +82,18 @@ namespace GameInput
                 onCameraSwitch.Invoke();
             }
         }
-
-        public void OnHumanZombieSwitch(InputAction.CallbackContext context)
+        public void OnHumanConvert(InputAction.CallbackContext context)
         {
             if (context.phase == InputActionPhase.Performed)
             {
-                onHumanZombieSwitch.Invoke();
+                onHumanConvert.Invoke();
+            }
+        }
+        public void OnZombieConvert(InputAction.CallbackContext context)
+        {
+            if (context.phase == InputActionPhase.Performed)
+            {
+                onZombieConvert.Invoke();
             }
         }
         #endregion
