@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 using Player;
 using Utilities;
 using Unity.Netcode;
+using Network;
 
 namespace Level
 {
@@ -24,12 +25,9 @@ namespace Level
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private GameObject zombiePrefab;
 
-        [Header("Team Settings")]
-        [Tooltip("Número de jugadores humanos")]
-        [SerializeField] private int numberOfHumans = 2;
+        private int numberOfHumans = 2;
 
-        [Tooltip("Número de zombis")]
-        [SerializeField] private int numberOfZombies = 2;
+        private int numberOfZombies = 2;
 
         [Header("Game Mode Settings")]
         [Tooltip("Selecciona el modo de juego")]
@@ -180,7 +178,11 @@ namespace Level
                 CoinsGenerated = levelBuilder.GetCoinsGenerated();
             }
 
-            SpawnTeams();
+            //SpawnTeams();
+            if (humanSpawnPoints != null)
+            { 
+                SpawnPlayer(humanSpawnPoints[0], playerPrefab);
+            }
 
             UpdateTeamUI();
         }
@@ -356,6 +358,7 @@ namespace Level
                 Debug.Log($"Instanciando jugador en {spawnPosition}");
                 // Crear una instancia del prefab en el punto especificado
                 GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
+                NetworkObject.SpawnAsPlayerObject(GameManager.Instance.GetID());
                 player.tag = "Player";
 
                 // Obtener la referencia a la cámara principal

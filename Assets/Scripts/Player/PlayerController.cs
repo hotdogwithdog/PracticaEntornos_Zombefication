@@ -1,12 +1,13 @@
 using GameInput;
 using System;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace Player
 {
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : NetworkBehaviour
     {
         private TextMeshProUGUI coinText;
 
@@ -63,17 +64,26 @@ namespace Player
 
         private void MoveInput(Vector2 movement)
         {
+            if (!IsOwner) return;
             horizontalInput = movement.x;
             verticalInput = movement.y;
         }
 
         void Update()
         {
-            // Mover el jugador
-            MovePlayer();
+            if (!IsSpawned) return;
 
-            // Manejar las animaciones del jugador
-            HandleAnimations();
+            if (IsHost)
+            {
+                // Mover el jugador
+                MovePlayer();
+            }
+
+            if (IsOwner)
+            {
+                // Manejar las animaciones del jugador
+                HandleAnimations();
+            }
         }
 
         void MovePlayer()

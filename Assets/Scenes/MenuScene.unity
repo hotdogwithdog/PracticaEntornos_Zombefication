@@ -537,7 +537,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4242402687381181303, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
       propertyPath: m_Name
-      value: character-orc
+      value: Just visual orc
       objectReference: {fileID: 0}
     - target: {fileID: 6927648253208943943, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
       propertyPath: GlobalObjectIdHash
@@ -547,7 +547,13 @@ PrefabInstance:
       propertyPath: InScenePlacedSourceGlobalObjectIdHash
       value: 3370827722
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7747007391555917777, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
+    - {fileID: -5958015653143517070, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
+    - {fileID: 6927648253208943943, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
+    - {fileID: 3216462718209633866, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
+    - {fileID: 2658792910875428337, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
+    - {fileID: 6352689205321721609, guid: 42625083221c5f4428e9a69d2f9deef2, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
