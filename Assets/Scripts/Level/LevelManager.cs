@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Player;
 using Utilities;
+using Unity.Netcode;
 
 namespace Level
 {
@@ -15,7 +16,7 @@ namespace Level
         Monedas
     }
 
-    public class LevelManager : MonoBehaviour
+    public class LevelManager : NetworkBehaviour
     {
         #region Properties
 
@@ -124,20 +125,7 @@ namespace Level
                 }
             }
 
-            remainingSeconds = minutes * 60;
-
-            // Obtener los puntos de aparición y el número de monedas generadas desde LevelBuilder
-            if (levelBuilder != null)
-            {
-                levelBuilder.Build();
-                humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
-                zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
-                CoinsGenerated = levelBuilder.GetCoinsGenerated();
-            }
-
-            SpawnTeams();
-
-            UpdateTeamUI();
+            
         }
 
         private void Update()
@@ -159,6 +147,42 @@ namespace Level
             {
                 ShowGameOverPanel();
             }
+        }
+
+        #endregion
+
+        #region Network
+
+        public override void OnNetworkSpawn()
+        {
+            remainingSeconds = minutes * 60;
+
+
+            if (IsHost)
+            {
+                GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
+            }
+        }
+
+
+        /// <summary>
+        /// This RPC it's called by the server when the seed is generated to pass the seed to all the clients and let him generate the same world
+        /// </summary>
+        /// <param name="seed"></param>
+        [Rpc(SendTo.ClientsAndHost)]
+        private void GenerateWorldRpc(int seed)
+        {
+            if (levelBuilder != null)
+            {
+                levelBuilder.Build(seed);
+                humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
+                zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
+                CoinsGenerated = levelBuilder.GetCoinsGenerated();
+            }
+
+            SpawnTeams();
+
+            UpdateTeamUI();
         }
 
         #endregion

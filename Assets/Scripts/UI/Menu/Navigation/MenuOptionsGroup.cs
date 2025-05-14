@@ -10,7 +10,7 @@ namespace UI.Menu.Navigation
 
         private void Start()
         {
-            _options = GetComponentsInChildren<MenuOption>();
+            _options = GetComponentsInChildren<MenuOption>(true);
 
             foreach (MenuOption option in _options)
             {

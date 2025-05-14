@@ -73,8 +73,9 @@ namespace Level
 
         #region World building methods
 
-        public void Build()
+        public void Build(int seed)
         {
+            Random.InitState(seed);
             CreateRooms(roomWidth, roomLength, numberOfRooms);
         }
 
