@@ -17,6 +17,7 @@ namespace Network
 
         public void ShutDown()
         {
+            Debug.Log("Server shutdown");
             NetworkManager.Singleton.Shutdown();
         }
 
@@ -26,6 +27,17 @@ namespace Network
 
             NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
+
+        public void DisconectClient()
+        {
+            Debug.Log($"Client Disconnected: {NetworkManager.Singleton.LocalClientId}");
+            // The client can't disconnect hitself of the server in a clean way without an Rpc so for don't convert this class that is a singleton
+            // i restart the all network manager of the client.
+            NetworkManager.Singleton.Shutdown();
+
+            NetworkManager.Singleton.SetSingleton();
+        }
+
 
     }
 }
