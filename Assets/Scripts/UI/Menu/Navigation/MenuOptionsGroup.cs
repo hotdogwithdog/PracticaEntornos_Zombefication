@@ -18,6 +18,14 @@ namespace UI.Menu.Navigation
             }
         }
 
+        private void OnDestroy()
+        {
+            foreach (MenuOption option in _options)
+            {
+                option.onOptionClicked -= OnOptionClicked;
+            }
+        }
+
         private void OnOptionClicked(MenuButtons option)
         {
             onOptionClicked?.Invoke(option);

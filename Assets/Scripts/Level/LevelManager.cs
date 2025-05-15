@@ -153,13 +153,17 @@ namespace Level
 
         public override void OnNetworkSpawn()
         {
-            remainingSeconds = minutes * 60;
-
-
+            
             if (IsHost)
             {
                 GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
+
+
+
+                remainingSeconds = minutes * 60;
             }
+
+
         }
 
 
@@ -178,11 +182,7 @@ namespace Level
                 CoinsGenerated = levelBuilder.GetCoinsGenerated();
             }
 
-            //SpawnTeams();
-            if (humanSpawnPoints != null)
-            { 
-                SpawnPlayer(humanSpawnPoints[0], playerPrefab);
-            }
+
 
             UpdateTeamUI();
         }
@@ -358,9 +358,7 @@ namespace Level
                 Debug.Log($"Instanciando jugador en {spawnPosition}");
                 // Crear una instancia del prefab en el punto especificado
                 GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
-                NetworkObject.SpawnAsPlayerObject(GameManager.Instance.GetID());
                 player.tag = "Player";
-
                 // Obtener la referencia a la cámara principal
                 Camera mainCamera = Camera.main;
 

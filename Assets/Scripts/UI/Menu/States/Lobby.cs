@@ -1,4 +1,5 @@
 ﻿using Network;
+using UI.Lobby;
 using UI.Menu.Navigation;
 using Unity.Netcode;
 using UnityEngine;
@@ -10,7 +11,7 @@ namespace UI.Menu.States
         private GameObject _startGameButtonObject;
         private GameObject _hostGameButtonObject;
         private GameObject _joinGameButtonObject;
-
+        private GameObject _lobbyOptions;
         public Lobby() : base("Menus/Lobby") { }
 
         public override void Enter()
@@ -24,6 +25,9 @@ namespace UI.Menu.States
                 else if (button.Action == MenuButtons.JoinLobby) _joinGameButtonObject = button.gameObject;
             }
             _startGameButtonObject?.SetActive(false);
+
+            _lobbyOptions = _menu.GetComponentInChildren<LobbyOptionsManager>().gameObject;
+            _lobbyOptions.SetActive(false);
         }
 
         protected override void OnOptionClicked(MenuButtons option)
@@ -31,32 +35,35 @@ namespace UI.Menu.States
             switch (option)
             {
                 case MenuButtons.StartGame:
-                    GameManager.Instance.StartGame();
+                    MenuManager.Instance.GameManager.StartGame();
+                    //MenuManager.Instance.SetState(new Gameplay());
                     break;
                 case MenuButtons.CreateLobby:
                     Debug.Log("Create");
-                    GameManager.Instance.StartHost();
+                    MenuManager.Instance.GameManager.StartHost();
                     _startGameButtonObject.SetActive(true);
+                    _lobbyOptions.SetActive(true);
                     _hostGameButtonObject.SetActive(false);
                     _joinGameButtonObject.SetActive(false);
                     break;
                 case MenuButtons.JoinLobby:
                     Debug.Log("Join");
-                    GameManager.Instance.StartClient();
+                    MenuManager.Instance.GameManager.StartClient();
                     _hostGameButtonObject.SetActive(false);
                     _joinGameButtonObject.SetActive(false);
                     break;
                 case MenuButtons.Back:
                     if (_startGameButtonObject.activeSelf)
                     {
-                        GameManager.Instance.ShutDown();
+                        MenuManager.Instance.GameManager.ShutDown();
                         _startGameButtonObject.SetActive(false);
+                        _lobbyOptions.SetActive(false);
                         _hostGameButtonObject.SetActive(true);
                         _joinGameButtonObject.SetActive(true);
                     }
                     else if (!_hostGameButtonObject.activeSelf && !_joinGameButtonObject.activeSelf)
                     {
-                        GameManager.Instance.DisconectClient();
+                        MenuManager.Instance.GameManager.DisconectClient();
                         _hostGameButtonObject.SetActive(true);
                         _joinGameButtonObject.SetActive(true);
                     }

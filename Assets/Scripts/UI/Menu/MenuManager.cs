@@ -1,5 +1,6 @@
 using UnityEngine;
 using UI.Menu.States;
+using Network;
 
 
 namespace UI.Menu
@@ -8,9 +9,11 @@ namespace UI.Menu
     {
         // Context of the state pattern
         private IState _currentState;
+        public GameManager GameManager {  get; private set; }
 
         private void Start()
         {
+            GameManager = GetComponent<GameManager>();
             SetState(new Main());
         }
 
