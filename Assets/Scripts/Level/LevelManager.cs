@@ -28,6 +28,8 @@ namespace Level
         #region OnlyServer
         private HashSet<ulong> _zombies;
         private HashSet<ulong> _humans;
+        private int indexForHumans = 0;
+        private int indexForZombies = 0;
         #endregion
 
         private GameManager _gameManager;
@@ -164,9 +166,10 @@ namespace Level
                 GenerateTeams();
 
                 GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
-                // Set the teams and spawn(tp) the players to their positions
 
-                TpPlayersToSpawn();
+
+                // Set the teams and spawn(tp) the players to their positions must wait until all the clients have been spawn the map this have a shyncronisation problem
+                // TpPlayersToSpawn();
 
                 remainingSeconds = minutes * 60;
             }
@@ -187,12 +190,34 @@ namespace Level
                 levelBuilder.Build(seed);
                 humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
                 zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
+                Debug.Log("SPAWN POINTS PICKED");
                 CoinsGenerated = levelBuilder.GetCoinsGenerated();
             }
 
-
+            // Say to the server that i can spawn (no problems of shyncronisation because the map exist in local at the time this petition is send
+            TpMyPlayerObjectToSpawnRpc(NetworkManager.Singleton.LocalClientId);
 
             UpdateTeamUI();
+        }
+
+        [Rpc(SendTo.Server)]
+        private void TpMyPlayerObjectToSpawnRpc(ulong clientId)
+        {
+            GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
+            if (_humans.Contains(clientId))
+            {
+                TpPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
+                indexForHumans++;
+            }
+            else if (_zombies.Contains(clientId))
+            {
+                TpPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
+                indexForZombies++;
+            }
+            else
+            {
+                Debug.LogError($"ERROR: The Client with ID {clientId} it's not in any team");
+            }
         }
 
         [Rpc(SendTo.SpecifiedInParams)]
@@ -491,17 +516,19 @@ namespace Level
             Debug.Log("Instanciando equipos");
 
             int i = 0;
+            Debug.Log($"SIZE OF HUMANSPOINTS: {humanSpawnPoints.Count}");
+            Debug.Log($"SIZE OF ZOMBIESPOINTS: {zombieSpawnPoints.Count}");
             foreach (ulong clientId in _humans)
             {
                 GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
-                TpPlayer(true, player, clientId, humanSpawnPoints[i]);
+                TpPlayer(true, player, clientId, humanSpawnPoints[i % humanSpawnPoints.Count]);
                 i++;
             }
 
             foreach (ulong clientId in _zombies)
             {
                 GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
-                TpPlayer(false, player, clientId, zombieSpawnPoints[i]);
+                TpPlayer(false, player, clientId, zombieSpawnPoints[i % zombieSpawnPoints.Count]);
                 i++;
             }
         }
