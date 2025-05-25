@@ -6,6 +6,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Player;
 using Utilities;
+using Unity.Netcode;
+using Network;
+using Unity.Collections;
 
 namespace Level
 {
@@ -15,20 +18,27 @@ namespace Level
         Monedas
     }
 
-    public class LevelManager : MonoBehaviour
+    public class LevelManager : NetworkBehaviour
     {
+        #region NetworkVariables
+        private NetworkVariable<int> numberOfHumans = new NetworkVariable<int>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
+        private NetworkVariable<int> numberOfZombies = new NetworkVariable<int>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
+        #endregion
+
+        #region OnlyServer
+        private HashSet<ulong> _zombies;
+        private HashSet<ulong> _humans;
+        private int indexForHumans = 0;
+        private int indexForZombies = 0;
+        #endregion
+
+        private GameManager _gameManager;
+
         #region Properties
 
         [Header("Prefabs")]
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private GameObject zombiePrefab;
-
-        [Header("Team Settings")]
-        [Tooltip("Número de jugadores humanos")]
-        [SerializeField] private int numberOfHumans = 2;
-
-        [Tooltip("Número de zombis")]
-        [SerializeField] private int numberOfZombies = 2;
 
         [Header("Game Mode Settings")]
         [Tooltip("Selecciona el modo de juego")]
@@ -50,7 +60,6 @@ namespace Level
         public string PlayerPrefabName => playerPrefab.name;
         public string ZombiePrefabName => zombiePrefab.name;
 
-        private UniqueIdGenerator uniqueIdGenerator;
         private LevelBuilder levelBuilder;
 
         private PlayerController playerController;
@@ -79,9 +88,6 @@ namespace Level
         private void Awake()
         {
             Debug.Log("Despertando el nivel");
-
-            // Obtener la referencia al UniqueIDGenerator
-            uniqueIdGenerator = GetComponent<UniqueIdGenerator>();
 
             // Obtener la referencia al LevelBuilder
             levelBuilder = GetComponent<LevelBuilder>();
@@ -124,20 +130,7 @@ namespace Level
                 }
             }
 
-            remainingSeconds = minutes * 60;
-
-            // Obtener los puntos de aparición y el número de monedas generadas desde LevelBuilder
-            if (levelBuilder != null)
-            {
-                levelBuilder.Build();
-                humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
-                zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
-                CoinsGenerated = levelBuilder.GetCoinsGenerated();
-            }
-
-            SpawnTeams();
-
-            UpdateTeamUI();
+            
         }
 
         private void Update()
@@ -163,7 +156,149 @@ namespace Level
 
         #endregion
 
+        #region Network
+
+        public override void OnNetworkSpawn()
+        {
+            _gameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+            if (IsHost)
+            {
+                GenerateTeams();
+
+                GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
+
+
+                // Set the teams and spawn(tp) the players to their positions must wait until all the clients have been spawn the map this have a shyncronisation problem
+                // TpPlayersToSpawn();
+
+                remainingSeconds = minutes * 60;
+            }
+
+
+        }
+
+
+        /// <summary>
+        /// This RPC it's called by the server when the seed is generated to pass the seed to all the clients and let him generate the same world
+        /// </summary>
+        /// <param name="seed"></param>
+        [Rpc(SendTo.ClientsAndHost)]
+        private void GenerateWorldRpc(int seed)
+        {
+            if (levelBuilder != null)
+            {
+                levelBuilder.Build(seed);
+                humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
+                zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
+                Debug.Log("SPAWN POINTS PICKED");
+                CoinsGenerated = levelBuilder.GetCoinsGenerated();
+            }
+
+            // Say to the server that i can spawn (no problems of shyncronisation because the map exist in local at the time this petition is send
+            TpMyPlayerObjectToSpawnRpc(NetworkManager.Singleton.LocalClientId);
+
+            UpdateTeamUI();
+        }
+
+        [Rpc(SendTo.Server)]
+        private void TpMyPlayerObjectToSpawnRpc(ulong clientId)
+        {
+            GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
+            if (_humans.Contains(clientId))
+            {
+                TpPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
+                indexForHumans++;
+            }
+            else if (_zombies.Contains(clientId))
+            {
+                TpPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
+                indexForZombies++;
+            }
+            else
+            {
+                Debug.LogError($"ERROR: The Client with ID {clientId} it's not in any team");
+            }
+        }
+
+        [Rpc(SendTo.SpecifiedInParams)]
+        private void SetCameraRpc(ulong playerObjectId, RpcParams rpcParams = default)
+        {
+            Debug.Log($"Client Id: {NetworkManager.Singleton.LocalClientId}");
+            // Obtener la referencia a la cámara principal
+            Camera mainCamera = Camera.main;
+            GameObject player = null;
+
+            foreach (GameObject gameObject in GameObject.FindGameObjectsWithTag("Player"))
+            {
+                if (gameObject.GetComponent<NetworkObject>().NetworkObjectId == playerObjectId) player = gameObject;
+            }
+
+            if (mainCamera != null)
+            {
+                // Obtener el script CameraController de la cámara principal
+                CameraController cameraController = mainCamera.GetComponent<CameraController>();
+
+                if (cameraController != null)
+                {
+                    Debug.Log($"CameraController encontrado en la cámara principal.");
+                    // Asignar el jugador al script CameraController
+                    cameraController.player = player.transform;
+                }
+
+                Debug.Log($"Cámara principal encontrada en {mainCamera}");
+                // Obtener el componente PlayerController del jugador instanciado
+                playerController = player.GetComponent<PlayerController>();
+                // Asignar el transform de la cámara al PlayerController
+                if (playerController != null)
+                {
+                    Debug.Log($"PlayerController encontrado en el jugador instanciado.");
+                    playerController.enabled = true;
+                    playerController.cameraTransform = mainCamera.transform;
+                }
+                else
+                {
+                    Debug.LogError("PlayerController no encontrado en el jugador instanciado.");
+                }
+            }
+            else
+            {
+                Debug.LogError("No se encontró la cámara principal.");
+            }
+        }
+
+        #endregion
+
         #region Team management methods
+
+        /// <summary>
+        /// Generates two sets for the client ids one of humans the other of zombies and they are all humans minus one of them
+        /// </summary>
+        private void GenerateTeams()
+        {
+            _zombies = new HashSet<ulong>();
+            _humans = new HashSet<ulong>();
+
+            ulong[] clientsIds = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+            int index;
+            if (_gameManager.nPlayers.Value <= 1)
+            {
+                index = -1;
+            }
+            else index = UnityEngine.Random.Range(0, _gameManager.nPlayers.Value);
+
+            for (int i = 0; i < _gameManager.nPlayers.Value; ++i)
+            {
+                if (i == index) _zombies.Add(clientsIds[i]);
+                else _humans.Add(clientsIds[i]);
+            }
+
+            numberOfHumans.Value = _humans.Count;
+            numberOfZombies.Value = _zombies.Count;
+
+            Debug.Log($"nPlayers: {_gameManager.nPlayers.Value}");
+            Debug.Log($"HUMANS: {_humans.Count}");
+            Debug.Log($"ZOMBIES: {_zombies.Count}");
+        }
 
         private void OnZombieConvert()
         {
@@ -194,7 +329,7 @@ namespace Level
                 // Guardar la posición, rotación y uniqueID del humano actual
                 Vector3 playerPosition = human.transform.position;
                 Quaternion playerRotation = human.transform.rotation;
-                string uniqueID = human.GetComponent<PlayerController>().uniqueID;
+                string uniqueID = human.GetComponent<PlayerController>().playerName.Value.ToString();
 
                 // Destruir el humano actual
                 Destroy(human);
@@ -209,9 +344,8 @@ namespace Level
                 {
                     playerController.enabled = enabled;
                     playerController.isZombie = true; // Cambiar el estado a zombie
-                    playerController.uniqueID = uniqueID; // Mantener el identificador único
-                    numberOfHumans--; // Reducir el número de humanos
-                    numberOfZombies++; // Aumentar el número de zombis
+                    numberOfHumans.Value--; // Reducir el número de humanos
+                    numberOfZombies.Value++; // Aumentar el número de zombis
                     UpdateTeamUI();
 
                     if (enabled)
@@ -305,8 +439,8 @@ namespace Level
                         playerController.enabled = true;
                         playerController.cameraTransform = mainCamera.transform;
                         playerController.isZombie = false; // Cambiar el estado a humano
-                        numberOfHumans++; // Aumentar el número de humanos
-                        numberOfZombies--; // Reducir el número de zombis
+                        numberOfHumans.Value++; // Aumentar el número de humanos
+                        numberOfZombies.Value--; // Reducir el número de zombis
                     }
                     else
                     {
@@ -333,7 +467,6 @@ namespace Level
                 // Crear una instancia del prefab en el punto especificado
                 GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
                 player.tag = "Player";
-
                 // Obtener la referencia a la cámara principal
                 Camera mainCamera = Camera.main;
 
@@ -358,8 +491,6 @@ namespace Level
                         Debug.Log($"PlayerController encontrado en el jugador instanciado.");
                         playerController.enabled = true;
                         playerController.cameraTransform = mainCamera.transform;
-                        playerController.uniqueID = uniqueIdGenerator.GenerateUniqueID(); // Generar un identificador único
-
                     }
                     else
                     {
@@ -377,45 +508,60 @@ namespace Level
             }
         }
 
-        private void SpawnTeams()
+        /// <summary>
+        /// Tp the players to the corresponding map positions and change the prefabs to the correct prefabs
+        /// </summary>
+        private void TpPlayersToSpawn()
         {
             Debug.Log("Instanciando equipos");
-            if (humanSpawnPoints.Count <= 0) { return; }
-            SpawnPlayer(humanSpawnPoints[0], playerPrefab);
-            Debug.Log($"Personaje jugable instanciado en {humanSpawnPoints[0]}");
 
-            for (int i = 1; i < numberOfHumans; i++)
+            int i = 0;
+            Debug.Log($"SIZE OF HUMANSPOINTS: {humanSpawnPoints.Count}");
+            Debug.Log($"SIZE OF ZOMBIESPOINTS: {zombieSpawnPoints.Count}");
+            foreach (ulong clientId in _humans)
             {
-                if (i < humanSpawnPoints.Count)
-                {
-                    SpawnNonPlayableCharacter(playerPrefab, humanSpawnPoints[i]);
-                }
+                GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
+                TpPlayer(true, player, clientId, humanSpawnPoints[i % humanSpawnPoints.Count]);
+                i++;
             }
 
-            for (int i = 0; i < numberOfZombies; i++)
+            foreach (ulong clientId in _zombies)
             {
-                if (i < zombieSpawnPoints.Count)
-                {
-                    SpawnNonPlayableCharacter(zombiePrefab, zombieSpawnPoints[i]);
-                }
+                GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
+                TpPlayer(false, player, clientId, zombieSpawnPoints[i % zombieSpawnPoints.Count]);
+                i++;
             }
         }
 
-        private void SpawnNonPlayableCharacter(GameObject prefab, Vector3 spawnPosition)
+
+        private void TpPlayer(bool isHuman, GameObject player, ulong clientId, Vector3 spawnPosition)
         {
-            if (prefab != null)
+            NetworkObject networkObject = player.GetComponent<NetworkObject>();
+            if (isHuman)
             {
-                GameObject npc = Instantiate(prefab, spawnPosition, Quaternion.identity);
-                // Desactivar el controlador del jugador en los NPCs
-                var playerController = npc.GetComponent<PlayerController>();
-                if (playerController != null)
-                {
-                    playerController.enabled = false; // Desactivar el controlador del jugador
-                    playerController.uniqueID = uniqueIdGenerator.GenerateUniqueID(); // Asignar un identificador único
-                }
-                Debug.Log($"Personaje no jugable instanciado en {spawnPosition}");
+                player.transform.position = spawnPosition;
             }
+            else
+            {
+                PlayerController playerController = player.GetComponent<PlayerController>();
+                // Store all the relevant data
+                FixedString64Bytes name = playerController.playerName.Value;
+                networkObject.Despawn();
+                networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
+                networkObject.GetComponent<PlayerController>().playerName.Value = name;
+            }
+            // Rpc for set the camera on the client that are this player
+            var rpcParams = new RpcParams
+            {
+                Send = new RpcSendParams
+                {
+                    Target = RpcTarget.Single(clientId, RpcTargetUse.Temp)
+                }
+            };
+            SetCameraRpc(networkObject.NetworkObjectId, rpcParams);
         }
+
+
 
         private void UpdateTeamUI()
         {

@@ -8,6 +8,8 @@
         Credits,
         Exit,
         Lobby,
-        StartGame
+        StartGame,
+        JoinLobby,
+        CreateLobby
     }
 }

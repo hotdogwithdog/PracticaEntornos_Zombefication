@@ -10,11 +10,19 @@ namespace UI.Menu.Navigation
 
         private void Start()
         {
-            _options = GetComponentsInChildren<MenuOption>();
+            _options = GetComponentsInChildren<MenuOption>(true);
 
             foreach (MenuOption option in _options)
             {
                 option.onOptionClicked += OnOptionClicked;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            foreach (MenuOption option in _options)
+            {
+                option.onOptionClicked -= OnOptionClicked;
             }
         }
 

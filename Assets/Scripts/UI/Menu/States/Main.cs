@@ -1,7 +1,4 @@
-﻿using UnityEditor;
-using UnityEditor.SearchService;
-using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using UnityEngine;
 
 namespace UI.Menu.States
 {
@@ -14,7 +11,7 @@ namespace UI.Menu.States
             switch (option)
             {
                 case MenuButtons.Lobby:
-                    SceneManager.LoadScene("GameScene");
+                    MenuManager.Instance.SetState(new Lobby());
                     break;
                 case MenuButtons.Options:
                     MenuManager.Instance.SetState(new Options());
@@ -24,7 +21,7 @@ namespace UI.Menu.States
                     break;
                 case MenuButtons.Exit:
 #if UNITY_EDITOR
-                    EditorApplication.isPlaying = false;
+                    UnityEditor.EditorApplication.isPlaying = false;
 #else
                     Application.Quit();
 #endif

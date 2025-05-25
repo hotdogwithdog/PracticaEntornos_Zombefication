@@ -1,13 +1,16 @@
-using GameInput;
-using System;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using Unity.Collections;
 
 namespace Player
 {
-    public class PlayerController : MonoBehaviour
+    public class PlayerController : NetworkBehaviour
     {
+        #region NetWorkVariables
+        public NetworkVariable<FixedString64Bytes> playerName = new NetworkVariable<FixedString64Bytes>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        #endregion
+
         private TextMeshProUGUI coinText;
 
         [Header("Stats")]
@@ -15,7 +18,6 @@ namespace Player
 
         [Header("Character settings")]
         public bool isZombie = false; // Añadir una propiedad para el estado del jugador
-        public string uniqueID; // Añadir una propiedad para el identificador único
 
         [Header("Movement Settings")]
         public float moveSpeed = 5f;           // Velocidad de movimiento
@@ -63,17 +65,26 @@ namespace Player
 
         private void MoveInput(Vector2 movement)
         {
+            if (!IsOwner) return;
             horizontalInput = movement.x;
             verticalInput = movement.y;
         }
 
         void Update()
         {
-            // Mover el jugador
-            MovePlayer();
+            if (!IsSpawned) return;
 
-            // Manejar las animaciones del jugador
-            HandleAnimations();
+            if (IsHost)
+            {
+                // Mover el jugador
+                MovePlayer();
+            }
+
+            if (IsOwner)
+            {
+                // Manejar las animaciones del jugador
+                HandleAnimations();
+            }
         }
 
         void MovePlayer()

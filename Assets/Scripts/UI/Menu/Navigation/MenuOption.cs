@@ -8,6 +8,7 @@ namespace UI.Menu.Navigation
     {
         [SerializeField]
         private MenuButtons _action;
+        public MenuButtons Action { get { return _action; } }
 
         public Action<MenuButtons> onOptionClicked;
 
