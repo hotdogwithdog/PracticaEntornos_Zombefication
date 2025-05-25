@@ -13,7 +13,7 @@ namespace Enemies
             if (playerController != null && !playerController.isZombie)
             {
                 playerController.isZombie = true;
-                Debug.Log("PlayerController encontrado: " + playerController.uniqueID);
+                Debug.Log("PlayerController encontrado: " + playerController.playerName.Value);
 
                 // Obtener el prefab de humano desde el LevelManager
                 LevelManager levelManager = FindObjectOfType<LevelManager>();

@@ -44,13 +44,13 @@ namespace UI.Lobby
         private void CoinsDensityChange(float value, sldOptionToControl control)
         {
             Debug.Log($"The control of {control} has the value {value}");
-            MenuManager.Instance.GameManager.SetCoinsDensity(value);
+            MenuManager.Instance.GameManager.SetCoinsDensityRpc(value);
         }
 
         private void MaxTimeChange(float value, sldOptionToControl control)
         {
             Debug.Log($"The control of {control} has the value {value}");
-            MenuManager.Instance.GameManager.SetMaxTime(value);
+            MenuManager.Instance.GameManager.SetMaxTimeRpc(value);
         }
 
 
