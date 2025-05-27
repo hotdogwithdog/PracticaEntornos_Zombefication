@@ -33,12 +33,15 @@ namespace UI.Lobby
         }
         private void OnDestroy()
         {
-            foreach (OptionMove optionMove in _gameModeMoves)
+            if (_gameModeMoves != null)
             {
-                optionMove.OnClick -= GameModeChange;
+                foreach (OptionMove optionMove in _gameModeMoves)
+                {
+                    optionMove.OnClick -= GameModeChange;
+                }
             }
-            _maxTimeSldController.OnValueChanged -= MaxTimeChange;
-            _coinsDensitySldController.OnValueChanged -= CoinsDensityChange;
+            if (_maxTimeSldController != null) _maxTimeSldController.OnValueChanged -= MaxTimeChange;
+            if (_coinsDensitySldController != null) _coinsDensitySldController.OnValueChanged -= CoinsDensityChange;
         }
 
         private void CoinsDensityChange(float value, sldOptionToControl control)
