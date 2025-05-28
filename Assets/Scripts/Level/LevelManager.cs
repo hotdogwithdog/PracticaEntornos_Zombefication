@@ -23,7 +23,6 @@ namespace Level
         #region NetworkVariables
         private NetworkVariable<int> numberOfHumans = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private NetworkVariable<int> numberOfZombies = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-        private NetworkVariable<GameOptions> gameOptions = new NetworkVariable<GameOptions>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private NetworkVariable<float> remainingSeconds = new NetworkVariable<float>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         #endregion
 
@@ -35,6 +34,7 @@ namespace Level
         #endregion
 
         private GameManager _gameManager;
+        private GameOptions _gameOptions;   // Store locally because the real value is in the GameManager (must do not change while gameplay so in this state is somthing const)
 
         #region Properties
 
@@ -52,6 +52,7 @@ namespace Level
         private TextMeshProUGUI humansText;
         private TextMeshProUGUI zombiesText;
         private TextMeshProUGUI gameModeText;
+        private TextMeshProUGUI gameModeConditionValueText;
 
         private int CoinsGenerated = 0;
 
@@ -98,7 +99,8 @@ namespace Level
                     // Buscar los TextMeshProUGUI llamados "HumansValue" y "ZombiesValue" dentro del Panel
                     Transform humansTextTransform = panel.Find("HumansValue");
                     Transform zombiesTextTransform = panel.Find("ZombiesValue");
-                    Transform gameModeTextTransform = panel.Find("GameModeConditionValue");
+                    Transform gameModeTextTransform = panel.Find("GameMode");
+                    Transform gameModeConditionTextTransform = panel.Find("GameModeConditionValue");
 
                     if (humansTextTransform != null)
                     {
@@ -114,6 +116,11 @@ namespace Level
                     {
                         gameModeText = gameModeTextTransform.GetComponent<TextMeshProUGUI>();
                     }
+
+                    if (gameModeConditionTextTransform != null)
+                    {
+                        gameModeConditionValueText = gameModeConditionTextTransform.GetComponent<TextMeshProUGUI>();
+                    }
                 }
             }
 
@@ -122,12 +129,12 @@ namespace Level
 
         private void Update()
         {
-            if (gameOptions.Value.gameMode == GameMode.Tiempo)
+            if (_gameOptions.gameMode == GameMode.Tiempo)
             {
                 // Lógica para el modo de juego basado en tiempo
                 HandleTimeLimitedGameMode();
             }
-            else if (gameOptions.Value.gameMode == GameMode.Monedas)
+            else if (_gameOptions.gameMode == GameMode.Monedas)
             {
                 // Lógica para el modo de juego basado en monedas
                 HandleCoinBasedGameMode();
@@ -147,6 +154,11 @@ namespace Level
         public override void OnNetworkSpawn()
         {
             _gameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+
+            _gameOptions = _gameManager.gameOptions.Value;
+
+            UpdateGameModeUI();
+
             if (IsHost)
             {
                 GenerateTeams();
@@ -174,24 +186,24 @@ namespace Level
                 Debug.Log($"Nivel generado en el cliente: {NetworkManager.Singleton.LocalClientId}");
             }
             // Say to the server that i can spawn (no problems of shyncronisation because the map exist in local at the time this petition is send
-            TpMyPlayerObjectToSpawnRpc(NetworkManager.Singleton.LocalClientId);
+            SpawnMyPlayerObjectRpc(NetworkManager.Singleton.LocalClientId);
 
             UpdateTeamUI();
         }
 
         [Rpc(SendTo.Server)]
-        private void TpMyPlayerObjectToSpawnRpc(ulong clientId)
+        private void SpawnMyPlayerObjectRpc(ulong clientId)
         {
             Debug.Log($"TP of the client {clientId} is in process");
             GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
             if (_humans.Contains(clientId))
             {
-                TpPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
+                SpawnPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
                 indexForHumans++;
             }
             else if (_zombies.Contains(clientId))
             {
-                TpPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
+                SpawnPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
                 indexForZombies++;
             }
             else
@@ -439,12 +451,17 @@ namespace Level
             }
         }
 
-        private void TpPlayer(bool isHuman, GameObject player, ulong clientId, Vector3 spawnPosition)
+        private void SpawnPlayer(bool isHuman, GameObject player, ulong clientId, Vector3 spawnPosition)
         {
             NetworkObject networkObject = player.GetComponent<NetworkObject>();
             if (isHuman)
             {
-                player.transform.position = spawnPosition;
+                PlayerController playerController = player.GetComponent<PlayerController>();
+                // Store all the relevant data
+                FixedString64Bytes name = playerController.playerName.Value;
+                networkObject.Despawn();
+                networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
+                networkObject.GetComponent<PlayerController>().playerName.Value = name;
             }
             else
             {
@@ -480,6 +497,25 @@ namespace Level
             }
         }
 
+        private void UpdateGameModeUI()
+        {
+            if (gameModeText != null)
+            {
+                switch (_gameOptions.gameMode)
+                {
+                    case Level.GameMode.Tiempo:
+                        gameModeText.text = "Time:";
+                        break;
+                    case Level.GameMode.Monedas:
+                        gameModeText.text = "Coins:";
+                        break;
+                    default:
+                        Debug.LogError($"ERROR UNKONW GAMEMODE: {_gameOptions.gameMode}");
+                        return;
+                }
+            }
+        }
+
         #endregion
 
         #region Modo de juego
@@ -508,9 +544,9 @@ namespace Level
             int secondsRemaining = Mathf.FloorToInt(remainingActualSeconds % 60);
 
             // Actualizar el texto de la interfaz de usuario
-            if (gameModeText != null)
+            if (gameModeConditionValueText != null)
             {
-                gameModeText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
+                gameModeConditionValueText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
             }
 
         }
@@ -520,9 +556,9 @@ namespace Level
             if (isGameOver) return;
 
             // Implementar la lógica para el modo de juego basado en monedas
-            if (gameModeText != null && playerController != null)
+            if (gameModeConditionValueText != null && playerController != null)
             {
-                gameModeText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
+                gameModeConditionValueText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
                 if (playerController.CoinsCollected == CoinsGenerated)
                 {
                     isGameOver = true;
