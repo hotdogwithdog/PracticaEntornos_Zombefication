@@ -98,7 +98,7 @@ namespace Level
 
                     // Calcular spawn points
                     Vector3 spawnPoint = new Vector3(x + roomWidth / 2, 2, z + roomLength / 2);
-                    if (j % 2 == 0) // antes : i % 2 == 0 && j % 2 == 0
+                    if (j % 2 == 0)
                     {
                         humanSpawnPoints.Add(spawnPoint);
                     }

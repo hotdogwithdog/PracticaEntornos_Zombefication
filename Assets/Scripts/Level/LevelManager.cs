@@ -21,8 +21,9 @@ namespace Level
     public class LevelManager : NetworkBehaviour
     {
         #region NetworkVariables
-        private NetworkVariable<int> numberOfHumans = new NetworkVariable<int>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
-        private NetworkVariable<int> numberOfZombies = new NetworkVariable<int>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Server);
+        private NetworkVariable<int> numberOfHumans = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<int> numberOfZombies = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<float> remainingSeconds = new NetworkVariable<float>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         #endregion
 
         #region OnlyServer
@@ -33,16 +34,13 @@ namespace Level
         #endregion
 
         private GameManager _gameManager;
+        private GameOptions _gameOptions;   // Store locally because the real value is in the GameManager (must do not change while gameplay so in this state is somthing const)
 
         #region Properties
 
         [Header("Prefabs")]
         [SerializeField] private GameObject playerPrefab;
         [SerializeField] private GameObject zombiePrefab;
-
-        [Header("Game Mode Settings")]
-        [Tooltip("Selecciona el modo de juego")]
-        [SerializeField] private GameMode gameMode;
 
         [Tooltip("Tiempo de partida en minutos para el modo tiempo")]
         [SerializeField] private int minutes = 5;
@@ -54,6 +52,7 @@ namespace Level
         private TextMeshProUGUI humansText;
         private TextMeshProUGUI zombiesText;
         private TextMeshProUGUI gameModeText;
+        private TextMeshProUGUI gameModeConditionValueText;
 
         private int CoinsGenerated = 0;
 
@@ -64,7 +63,6 @@ namespace Level
 
         private PlayerController playerController;
 
-        private float remainingSeconds;
         private bool isGameOver = false;
 
         public GameObject gameOverPanel; // Asigna el panel desde el inspector
@@ -87,17 +85,7 @@ namespace Level
 
         private void Awake()
         {
-            Debug.Log("Despertando el nivel");
-
-            // Obtener la referencia al LevelBuilder
             levelBuilder = GetComponent<LevelBuilder>();
-
-            Time.timeScale = 1f; // Asegurarse de que el tiempo no esté detenido
-        }
-
-        private void Start()
-        {
-            Debug.Log("Iniciando el nivel");
             // Buscar el objeto "CanvasPlayer" en la escena
             GameObject canvas = GameObject.Find("CanvasPlayer");
             if (canvas != null)
@@ -111,7 +99,8 @@ namespace Level
                     // Buscar los TextMeshProUGUI llamados "HumansValue" y "ZombiesValue" dentro del Panel
                     Transform humansTextTransform = panel.Find("HumansValue");
                     Transform zombiesTextTransform = panel.Find("ZombiesValue");
-                    Transform gameModeTextTransform = panel.Find("GameModeConditionValue");
+                    Transform gameModeTextTransform = panel.Find("GameMode");
+                    Transform gameModeConditionTextTransform = panel.Find("GameModeConditionValue");
 
                     if (humansTextTransform != null)
                     {
@@ -127,20 +116,25 @@ namespace Level
                     {
                         gameModeText = gameModeTextTransform.GetComponent<TextMeshProUGUI>();
                     }
+
+                    if (gameModeConditionTextTransform != null)
+                    {
+                        gameModeConditionValueText = gameModeConditionTextTransform.GetComponent<TextMeshProUGUI>();
+                    }
                 }
             }
 
-            
+            Time.timeScale = 1f; // Asegurarse de que el tiempo no esté detenido
         }
 
         private void Update()
         {
-            if (gameMode == GameMode.Tiempo)
+            if (_gameOptions.gameMode == GameMode.Tiempo)
             {
                 // Lógica para el modo de juego basado en tiempo
                 HandleTimeLimitedGameMode();
             }
-            else if (gameMode == GameMode.Monedas)
+            else if (_gameOptions.gameMode == GameMode.Monedas)
             {
                 // Lógica para el modo de juego basado en monedas
                 HandleCoinBasedGameMode();
@@ -157,26 +151,23 @@ namespace Level
         #endregion
 
         #region Network
-
         public override void OnNetworkSpawn()
         {
             _gameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
+
+            _gameOptions = _gameManager.gameOptions.Value;
+
+            UpdateGameModeUI();
+
             if (IsHost)
             {
                 GenerateTeams();
 
                 GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
 
-
-                // Set the teams and spawn(tp) the players to their positions must wait until all the clients have been spawn the map this have a shyncronisation problem
-                // TpPlayersToSpawn();
-
-                remainingSeconds = minutes * 60;
+                remainingSeconds.Value = minutes * 60;
             }
-
-
         }
-
 
         /// <summary>
         /// This RPC it's called by the server when the seed is generated to pass the seed to all the clients and let him generate the same world
@@ -192,26 +183,27 @@ namespace Level
                 zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
                 Debug.Log("SPAWN POINTS PICKED");
                 CoinsGenerated = levelBuilder.GetCoinsGenerated();
+                Debug.Log($"Nivel generado en el cliente: {NetworkManager.Singleton.LocalClientId}");
             }
-
             // Say to the server that i can spawn (no problems of shyncronisation because the map exist in local at the time this petition is send
-            TpMyPlayerObjectToSpawnRpc(NetworkManager.Singleton.LocalClientId);
+            SpawnMyPlayerObjectRpc(NetworkManager.Singleton.LocalClientId);
 
             UpdateTeamUI();
         }
 
         [Rpc(SendTo.Server)]
-        private void TpMyPlayerObjectToSpawnRpc(ulong clientId)
+        private void SpawnMyPlayerObjectRpc(ulong clientId)
         {
+            Debug.Log($"TP of the client {clientId} is in process");
             GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
             if (_humans.Contains(clientId))
             {
-                TpPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
+                SpawnPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
                 indexForHumans++;
             }
             else if (_zombies.Contains(clientId))
             {
-                TpPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
+                SpawnPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
                 indexForZombies++;
             }
             else
@@ -275,6 +267,7 @@ namespace Level
         /// </summary>
         private void GenerateTeams()
         {
+            // TODO: Change that to be 50/50 humans/zombies with one more zombie in the even number of players cases
             _zombies = new HashSet<ulong>();
             _humans = new HashSet<ulong>();
 
@@ -458,88 +451,17 @@ namespace Level
             }
         }
 
-        private void SpawnPlayer(Vector3 spawnPosition, GameObject prefab)
-        {
-            Debug.Log($"Instanciando jugador en {spawnPosition}");
-            if (prefab != null)
-            {
-                Debug.Log($"Instanciando jugador en {spawnPosition}");
-                // Crear una instancia del prefab en el punto especificado
-                GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
-                player.tag = "Player";
-                // Obtener la referencia a la cámara principal
-                Camera mainCamera = Camera.main;
-
-                if (mainCamera != null)
-                {
-                    // Obtener el script CameraController de la cámara principal
-                    CameraController cameraController = mainCamera.GetComponent<CameraController>();
-
-                    if (cameraController != null)
-                    {
-                        Debug.Log($"CameraController encontrado en la cámara principal.");
-                        // Asignar el jugador al script CameraController
-                        cameraController.player = player.transform;
-                    }
-
-                    Debug.Log($"Cámara principal encontrada en {mainCamera}");
-                    // Obtener el componente PlayerController del jugador instanciado
-                    playerController = player.GetComponent<PlayerController>();
-                    // Asignar el transform de la cámara al PlayerController
-                    if (playerController != null)
-                    {
-                        Debug.Log($"PlayerController encontrado en el jugador instanciado.");
-                        playerController.enabled = true;
-                        playerController.cameraTransform = mainCamera.transform;
-                    }
-                    else
-                    {
-                        Debug.LogError("PlayerController no encontrado en el jugador instanciado.");
-                    }
-                }
-                else
-                {
-                    Debug.LogError("No se encontró la cámara principal.");
-                }
-            }
-            else
-            {
-                Debug.LogError("Faltan referencias al prefab o al punto de aparición.");
-            }
-        }
-
-        /// <summary>
-        /// Tp the players to the corresponding map positions and change the prefabs to the correct prefabs
-        /// </summary>
-        private void TpPlayersToSpawn()
-        {
-            Debug.Log("Instanciando equipos");
-
-            int i = 0;
-            Debug.Log($"SIZE OF HUMANSPOINTS: {humanSpawnPoints.Count}");
-            Debug.Log($"SIZE OF ZOMBIESPOINTS: {zombieSpawnPoints.Count}");
-            foreach (ulong clientId in _humans)
-            {
-                GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
-                TpPlayer(true, player, clientId, humanSpawnPoints[i % humanSpawnPoints.Count]);
-                i++;
-            }
-
-            foreach (ulong clientId in _zombies)
-            {
-                GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
-                TpPlayer(false, player, clientId, zombieSpawnPoints[i % zombieSpawnPoints.Count]);
-                i++;
-            }
-        }
-
-
-        private void TpPlayer(bool isHuman, GameObject player, ulong clientId, Vector3 spawnPosition)
+        private void SpawnPlayer(bool isHuman, GameObject player, ulong clientId, Vector3 spawnPosition)
         {
             NetworkObject networkObject = player.GetComponent<NetworkObject>();
             if (isHuman)
             {
-                player.transform.position = spawnPosition;
+                PlayerController playerController = player.GetComponent<PlayerController>();
+                // Store all the relevant data
+                FixedString64Bytes name = playerController.playerName.Value;
+                networkObject.Despawn();
+                networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
+                networkObject.GetComponent<PlayerController>().playerName.Value = name;
             }
             else
             {
@@ -550,6 +472,7 @@ namespace Level
                 networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
                 networkObject.GetComponent<PlayerController>().playerName.Value = name;
             }
+            Debug.Log($"Spawn of a {((isHuman) ? "human" : "zombie")} that is the client {clientId} in the position {spawnPosition}");
             // Rpc for set the camera on the client that are this player
             var rpcParams = new RpcParams
             {
@@ -561,18 +484,35 @@ namespace Level
             SetCameraRpc(networkObject.NetworkObjectId, rpcParams);
         }
 
-
-
         private void UpdateTeamUI()
         {
             if (humansText != null)
             {
-                humansText.text = $"{numberOfHumans}";
+                humansText.text = $"{numberOfHumans.Value}";
             }
 
             if (zombiesText != null)
             {
-                zombiesText.text = $"{numberOfZombies}";
+                zombiesText.text = $"{numberOfZombies.Value}";
+            }
+        }
+
+        private void UpdateGameModeUI()
+        {
+            if (gameModeText != null)
+            {
+                switch (_gameOptions.gameMode)
+                {
+                    case Level.GameMode.Tiempo:
+                        gameModeText.text = "Time:";
+                        break;
+                    case Level.GameMode.Monedas:
+                        gameModeText.text = "Coins:";
+                        break;
+                    default:
+                        Debug.LogError($"ERROR UNKONW GAMEMODE: {_gameOptions.gameMode}");
+                        return;
+                }
             }
         }
 
@@ -585,24 +525,28 @@ namespace Level
             // Implementar la lógica para el modo de juego basado en tiempo
             if (isGameOver) return;
 
-            // Decrementar remainingSeconds basado en Time.deltaTime
-            remainingSeconds -= Time.deltaTime;
-
-            // Comprobar si el tiempo ha llegado a cero
-            if (remainingSeconds <= 0)
+            if (IsHost)
             {
-                isGameOver = true;
-                remainingSeconds = 0;
+                // Decrementar remainingSeconds basado en Time.deltaTime
+                remainingSeconds.Value -= Time.deltaTime;
+
+                // Comprobar si el tiempo ha llegado a cero
+                if (remainingSeconds.Value <= 0)
+                {
+                    isGameOver = true;
+                    remainingSeconds.Value = 0;
+                }
             }
 
+            float remainingActualSeconds = remainingSeconds.Value;
             // Convertir remainingSeconds a minutos y segundos
-            int minutesRemaining = Mathf.FloorToInt(remainingSeconds / 60);
-            int secondsRemaining = Mathf.FloorToInt(remainingSeconds % 60);
+            int minutesRemaining = Mathf.FloorToInt(remainingActualSeconds / 60);
+            int secondsRemaining = Mathf.FloorToInt(remainingActualSeconds % 60);
 
             // Actualizar el texto de la interfaz de usuario
-            if (gameModeText != null)
+            if (gameModeConditionValueText != null)
             {
-                gameModeText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
+                gameModeConditionValueText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
             }
 
         }
@@ -612,9 +556,9 @@ namespace Level
             if (isGameOver) return;
 
             // Implementar la lógica para el modo de juego basado en monedas
-            if (gameModeText != null && playerController != null)
+            if (gameModeConditionValueText != null && playerController != null)
             {
-                gameModeText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
+                gameModeConditionValueText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
                 if (playerController.CoinsCollected == CoinsGenerated)
                 {
                     isGameOver = true;

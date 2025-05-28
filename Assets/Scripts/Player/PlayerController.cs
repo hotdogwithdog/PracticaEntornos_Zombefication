@@ -2,6 +2,7 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using Unity.Collections;
+using Unity.Netcode.Components;
 
 namespace Player
 {
@@ -9,6 +10,7 @@ namespace Player
     {
         #region NetWorkVariables
         public NetworkVariable<FixedString64Bytes> playerName = new NetworkVariable<FixedString64Bytes>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<Vector2> _move = new NetworkVariable<Vector2>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Owner);
         #endregion
 
         private TextMeshProUGUI coinText;
@@ -22,11 +24,11 @@ namespace Player
         [Header("Movement Settings")]
         public float moveSpeed = 5f;           // Velocidad de movimiento
         public float zombieSpeedModifier = 0.8f; // Modificador de velocidad para zombies
-        public Animator animator;              // Referencia al Animator
+        public NetworkAnimator animator;              // Referencia al Animator
         public Transform cameraTransform;      // Referencia a la cámara
 
-        private float horizontalInput;         // Entrada horizontal (A/D o flechas)
-        private float verticalInput;           // Entrada vertical (W/S o flechas)
+        private float _horizontalInput;
+        private float _verticalInput;
 
         void Start()
         {
@@ -66,22 +68,24 @@ namespace Player
         private void MoveInput(Vector2 movement)
         {
             if (!IsOwner) return;
-            horizontalInput = movement.x;
-            verticalInput = movement.y;
+            _horizontalInput = movement.x;  // this two for client animations
+            _verticalInput = movement.y;
         }
 
         void Update()
         {
             if (!IsSpawned) return;
 
+            if (IsOwner && cameraTransform != null)
+            {
+                Vector3 moveDirection = (cameraTransform.forward * _verticalInput + cameraTransform.right * _horizontalInput).normalized;
+                _move.Value = new Vector2(moveDirection.x, moveDirection.z);
+            }
+
             if (IsHost)
             {
                 // Mover el jugador
                 MovePlayer();
-            }
-
-            if (IsOwner)
-            {
                 // Manejar las animaciones del jugador
                 HandleAnimations();
             }
@@ -89,11 +93,7 @@ namespace Player
 
         void MovePlayer()
         {
-            if (cameraTransform == null) { return; }
-
-            // Calcular la dirección de movimiento en relación a la cámara
-            Vector3 moveDirection = (cameraTransform.forward * verticalInput + cameraTransform.right * horizontalInput).normalized;
-            moveDirection.y = 0f; // Asegurarnos de que el movimiento es horizontal (sin componente Y)
+            Vector3 moveDirection = new Vector3(_move.Value.x, 0, _move.Value.y);
 
             // Mover el jugador usando el Transform
             if (moveDirection != Vector3.zero)
@@ -113,7 +113,7 @@ namespace Player
         void HandleAnimations()
         {
             // Animaciones basadas en la dirección del movimiento
-            animator.SetFloat("Speed", Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput));  // Controla el movimiento (caminar/correr)
+            animator.Animator.SetFloat("Speed", Mathf.Abs(_move.Value.x) + Mathf.Abs(_move.Value.y));  // Controla el movimiento (caminar/correr)
         }
 
         public void CoinCollected()

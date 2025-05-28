@@ -265,7 +265,7 @@ MonoBehaviour:
   isZombie: 0
   moveSpeed: 5
   zombieSpeedModifier: 0.8
-  animator: {fileID: 370896438650836429}
+  animator: {fileID: 3002424203654158021}
   cameraTransform: {fileID: 0}
 --- !u!114 &5731535371317452342
 MonoBehaviour:
