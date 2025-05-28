@@ -3,6 +3,7 @@ using Unity.Netcode;
 using UnityEngine;
 using Unity.Collections;
 using Unity.Netcode.Components;
+using Level;
 
 namespace Player
 {
@@ -13,13 +14,10 @@ namespace Player
         private NetworkVariable<Vector2> _move = new NetworkVariable<Vector2>(default, NetworkVariableReadPermission.Owner, NetworkVariableWritePermission.Owner);
         #endregion
 
-        private TextMeshProUGUI coinText;
-
-        [Header("Stats")]
-        public int CoinsCollected = 0;
+        private LevelManager _levelManager;
 
         [Header("Character settings")]
-        public bool isZombie = false; // Añadir una propiedad para el estado del jugador
+        public bool isZombie = false; // This is not neccesary that are a networkVariable because the player and zombie are created and destroy in all the clients and this is constant
 
         [Header("Movement Settings")]
         public float moveSpeed = 5f;           // Velocidad de movimiento
@@ -30,29 +28,9 @@ namespace Player
         private float _horizontalInput;
         private float _verticalInput;
 
-        void Start()
+        private void Awake()
         {
-            // Buscar el objeto "CanvasPlayer" en la escena
-            GameObject canvas = GameObject.Find("CanvasPlayer");
-
-            if (canvas != null)
-            {
-                Debug.Log("Canvas encontrado");
-
-                // Buscar el Panel dentro del CanvasHud
-                Transform panel = canvas.transform.Find("PanelHud");
-                if (panel != null)
-                {
-                    // Buscar el TextMeshProUGUI llamado "CoinsValue" dentro del Panel
-                    Transform coinTextTransform = panel.Find("CoinsValue");
-                    if (coinTextTransform != null)
-                    {
-                        coinText = coinTextTransform.GetComponent<TextMeshProUGUI>();
-                    }
-                }
-            }
-
-            UpdateCoinUI();
+            _levelManager = GameObject.FindWithTag("LevelManager").GetComponent<LevelManager>();
         }
 
         private void OnEnable()
@@ -116,22 +94,20 @@ namespace Player
             animator.Animator.SetFloat("Speed", Mathf.Abs(_move.Value.x) + Mathf.Abs(_move.Value.y));  // Controla el movimiento (caminar/correr)
         }
 
-        public void CoinCollected()
+        public void CoinCollected(int coinId)
         {
-            if (!isZombie) // Solo los humanos pueden recoger monedas
-            {
-                this.CoinsCollected++;
-                UpdateCoinUI();
-            }
+            if (isZombie) return;
+
+            CoinCollectedRpc(coinId);
         }
 
-        void UpdateCoinUI()
+        #region NetworkMethods
+        [Rpc(SendTo.Server)]
+        public void CoinCollectedRpc(int coinId)
         {
-            if (coinText != null)
-            {
-                coinText.text = $"{CoinsCollected}";
-            }
+            _levelManager.CoinCollected(coinId);
         }
+        #endregion
     }
 }
 

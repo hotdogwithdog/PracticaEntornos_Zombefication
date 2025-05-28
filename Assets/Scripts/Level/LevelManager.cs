@@ -24,6 +24,7 @@ namespace Level
         private NetworkVariable<int> numberOfHumans = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private NetworkVariable<int> numberOfZombies = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         private NetworkVariable<float> remainingSeconds = new NetworkVariable<float>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        private NetworkVariable<int> coinsCollected = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         #endregion
 
         #region OnlyServer
@@ -31,6 +32,7 @@ namespace Level
         private HashSet<ulong> _humans;
         private int indexForHumans = 0;
         private int indexForZombies = 0;
+        private bool[] _coinsPicked;
         #endregion
 
         private GameManager _gameManager;
@@ -183,6 +185,7 @@ namespace Level
                 zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
                 Debug.Log("SPAWN POINTS PICKED");
                 CoinsGenerated = levelBuilder.GetCoinsGenerated();
+                if (IsHost) _coinsPicked = new bool[CoinsGenerated];
                 Debug.Log($"Nivel generado en el cliente: {NetworkManager.Singleton.LocalClientId}");
             }
             // Say to the server that i can spawn (no problems of shyncronisation because the map exist in local at the time this petition is send
@@ -462,6 +465,7 @@ namespace Level
                 networkObject.Despawn();
                 networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
                 networkObject.GetComponent<PlayerController>().playerName.Value = name;
+                networkObject.GetComponent<PlayerController>().isZombie = false;    // Security
             }
             else
             {
@@ -471,6 +475,7 @@ namespace Level
                 networkObject.Despawn();
                 networkObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, spawnPosition);
                 networkObject.GetComponent<PlayerController>().playerName.Value = name;
+                networkObject.GetComponent<PlayerController>().isZombie = true;    // Security
             }
             Debug.Log($"Spawn of a {((isHuman) ? "human" : "zombie")} that is the client {clientId} in the position {spawnPosition}");
             // Rpc for set the camera on the client that are this player
@@ -551,15 +556,22 @@ namespace Level
 
         }
 
+        public void CoinCollected(int coinId)
+        {
+            if (_coinsPicked[coinId]) return;
+            _coinsPicked[coinId] = true;
+            coinsCollected.Value++;
+        }
+
         private void HandleCoinBasedGameMode()
         {
             if (isGameOver) return;
 
             // Implementar la lógica para el modo de juego basado en monedas
-            if (gameModeConditionValueText != null && playerController != null)
+            if (gameModeConditionValueText != null)
             {
-                gameModeConditionValueText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
-                if (playerController.CoinsCollected == CoinsGenerated)
+                gameModeConditionValueText.text = $"{coinsCollected.Value}/{CoinsGenerated}";
+                if (coinsCollected.Value == CoinsGenerated)
                 {
                     isGameOver = true;
                 }
