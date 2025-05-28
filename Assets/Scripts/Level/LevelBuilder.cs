@@ -1,3 +1,4 @@
+using Player;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -219,6 +220,17 @@ namespace Level
             Instantiate(prefab, position, rotation, roomParent);
         }
 
+        private void PlaceCoin(float x, float z, Quaternion rotation)
+        {
+            Vector3 position = new Vector3(x, 0, z);
+            GameObject coin = Instantiate(coinPrefab, position, rotation, roomParent);
+            DetectPlayerCollision coinScript = coin.GetComponent<DetectPlayerCollision>();
+            if (coinScript != null)
+            {
+                coinScript._coinId = CoinsGenerated;
+            }
+        }
+
         /// <summary>
         /// Crea el muro exterior alrededor de las salas.
         /// </summary>
@@ -288,7 +300,7 @@ namespace Level
 
                 if (!isPositionOccupied) // Si no hay obstáculos, colocar la moneda
                 {
-                    PlaceElement(coinPrefab, tilePosition.x, tilePosition.z, Quaternion.identity);
+                    PlaceCoin(tilePosition.x, tilePosition.z, Quaternion.identity);
                     CoinsGenerated++;
                 }
             }

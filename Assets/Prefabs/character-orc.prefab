@@ -264,8 +264,7 @@ MonoBehaviour:
         byte0059: 0
         byte0060: 0
         byte0061: 0
-  CoinsCollected: 0
-  isZombie: 0
+  isZombie: 1
   moveSpeed: 5
   zombieSpeedModifier: 0.8
   animator: {fileID: 3216462718209633866}
