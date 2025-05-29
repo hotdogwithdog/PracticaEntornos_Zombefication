@@ -1,13 +1,16 @@
 using UnityEngine;
 using Player;
 using Level;
+using Unity.Netcode;
 
 namespace Enemies
 {
-    public class ZombieCollisionHandler : MonoBehaviour
+    public class ZombieCollisionHandler : NetworkBehaviour
     {
         private void OnCollisionEnter(Collision collision)
         {
+            if (!IsHost) return;
+
             PlayerController playerController = collision.gameObject.GetComponent<PlayerController>();
             Debug.Log("Colisión detectada con " + collision.gameObject.name);
             if (playerController != null && !playerController.isZombie)
@@ -20,7 +23,7 @@ namespace Enemies
                 if (levelManager != null && collision.gameObject.name.Contains(levelManager.PlayerPrefabName))
                 {
                     // Cambiar el humano a zombie
-                    levelManager.ChangeToZombie(collision.gameObject, playerController.enabled);
+                    levelManager.ChangeToZombie(collision.gameObject);
                 }
             }
         }

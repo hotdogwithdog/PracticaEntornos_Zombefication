@@ -66,9 +66,7 @@ namespace Network
             {
                 _clientPlayerNames.Clear();
                 _idGenerator = new Utilities.UniqueIdGenerator();   // Here one new for reset the internal cache of the class and don't repeat names
-                string hostID = _idGenerator.GenerateUniqueID();
-                _clientPlayerNames.Add(NetworkManager.Singleton.LocalClientId, hostID);
-                Debug.Log($"Host name : {hostID}");
+                AddName(NetworkManager.Singleton.LocalClientId);
 
                 nPlayers.Value = 1; // The actual host
                 NetworkManager.Singleton.OnClientConnectedCallback += ClientConnect;

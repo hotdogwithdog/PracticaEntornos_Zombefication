@@ -5,7 +5,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Player;
-using Utilities;
 using Unity.Netcode;
 using Network;
 using Unity.Collections;
@@ -72,18 +71,6 @@ namespace Level
         #endregion
 
         #region Unity game loop methods
-
-        private void OnEnable()
-        {
-            GameInput.InputReader.Instance.onHumanConvert += OnHumanConvert;
-            GameInput.InputReader.Instance.onZombieConvert += OnZombieConvert;
-        }
-
-        private void OnDisable()
-        {
-            GameInput.InputReader.Instance.onHumanConvert -= OnHumanConvert;
-            GameInput.InputReader.Instance.onZombieConvert -= OnZombieConvert;
-        }
 
         private void Awake()
         {
@@ -163,11 +150,23 @@ namespace Level
 
             if (IsHost)
             {
+                GameInput.InputReader.Instance.onHumanConvert += OnHumanConvert;
+                GameInput.InputReader.Instance.onZombieConvert += OnZombieConvert;
+
                 GenerateTeams();
 
                 GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
 
                 remainingSeconds.Value = minutes * 60;
+            }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            if (IsHost)
+            {
+                GameInput.InputReader.Instance.onHumanConvert -= OnHumanConvert;
+                GameInput.InputReader.Instance.onZombieConvert -= OnZombieConvert;
             }
         }
 
@@ -298,11 +297,16 @@ namespace Level
 
         private void OnZombieConvert()
         {
-            // Comprobar si el jugador actual está usando el prefab de humano
-            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+            GameObject currentPlayer = null;
+
+            foreach(GameObject player in GameObject.FindGameObjectsWithTag("Player"))
+            {
+                if (player.GetComponent<PlayerController>().OwnerClientId == NetworkManager.Singleton.LocalClientId) currentPlayer = player;
+            }
+
             if (currentPlayer != null && currentPlayer.name.Contains(playerPrefab.name))
             {
-                ChangeToZombie();
+                ChangeToZombie(currentPlayer);
             }
             else
             {
@@ -310,13 +314,7 @@ namespace Level
             }
         }
 
-        private void ChangeToZombie()
-        {
-            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
-            ChangeToZombie(currentPlayer, true);
-        }
-
-        public void ChangeToZombie(GameObject human, bool enabled)
+        public void ChangeToZombie(GameObject human)
         {
             Debug.Log("Cambiando a Zombie");
 
@@ -325,49 +323,40 @@ namespace Level
                 // Guardar la posición, rotación y uniqueID del humano actual
                 Vector3 playerPosition = human.transform.position;
                 Quaternion playerRotation = human.transform.rotation;
-                string uniqueID = human.GetComponent<PlayerController>().playerName.Value.ToString();
+                FixedString64Bytes uniqueID = human.GetComponent<PlayerController>().playerName.Value;
 
-                // Destruir el humano actual
-                Destroy(human);
+                NetworkObject playerNetObject = human.GetComponent<NetworkObject>();
+                ulong clientId = playerNetObject.OwnerClientId;
 
-                // Instanciar el prefab del zombie en la misma posición y rotación
-                GameObject zombie = Instantiate(zombiePrefab, playerPosition, playerRotation);
-                if (enabled) { zombie.tag = "Player"; }
+                // Update the dictionaries with the teams
+                _humans.Remove(clientId);
+                _zombies.Add(clientId);
+
+                // Despawnear al humano actual
+                playerNetObject.Despawn();
+
+                // Spawnear el prefab del zombie en la misma posición y rotación
+                playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
+                playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
+                playerNetObject.GetComponent<PlayerController>().isZombie = true;    // Security
+
+                // Set the camera in the player
+                var rpcParams = new RpcParams
+                {
+                    Send = new RpcSendParams
+                    {
+                        Target = RpcTarget.Single(clientId, RpcTargetUse.Temp)
+                    }
+                };
+                SetCameraRpc(playerNetObject.NetworkObjectId, rpcParams);
 
                 // Obtener el componente PlayerController del zombie instanciado
-                PlayerController playerController = zombie.GetComponent<PlayerController>();
+                PlayerController playerController = playerNetObject.GetComponent<PlayerController>();
                 if (playerController != null)
                 {
-                    playerController.enabled = enabled;
-                    playerController.isZombie = true; // Cambiar el estado a zombie
                     numberOfHumans.Value--; // Reducir el número de humanos
                     numberOfZombies.Value++; // Aumentar el número de zombis
                     UpdateTeamUI();
-
-                    if (enabled)
-                    {
-                        // Obtener la referencia a la cámara principal
-                        Camera mainCamera = Camera.main;
-
-                        if (mainCamera != null)
-                        {
-                            // Obtener el script CameraController de la cámara principal
-                            CameraController cameraController = mainCamera.GetComponent<CameraController>();
-
-                            if (cameraController != null)
-                            {
-                                // Asignar el zombie al script CameraController
-                                cameraController.player = zombie.transform;
-                            }
-
-                            // Asignar el transform de la cámara al PlayerController
-                            playerController.cameraTransform = mainCamera.transform;
-                        }
-                        else
-                        {
-                            Debug.LogError("No se encontró la cámara principal.");
-                        }
-                    }
                 }
                 else
                 {
@@ -382,75 +371,75 @@ namespace Level
 
         private void OnHumanConvert()
         {
-            // Comprobar si el jugador actual está usando el prefab de zombie
-            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+            GameObject currentPlayer = null;
+
+            foreach (GameObject player in GameObject.FindGameObjectsWithTag("Player"))
+            {
+                if (player.GetComponent<PlayerController>().OwnerClientId == NetworkManager.Singleton.LocalClientId) currentPlayer = player;
+            }
+
             if (currentPlayer != null && currentPlayer.name.Contains(zombiePrefab.name))
             {
-                ChangeToHuman();
+                ChangeToHuman(currentPlayer);
             }
             else
             {
                 Debug.Log("El jugador actual no es un zombie.");
             }
         }
-        private void ChangeToHuman()
+        private void ChangeToHuman(GameObject zombie)
         {
             Debug.Log("Cambiando a Humano");
 
-            // Obtener la referencia al jugador actual
-            GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+            
 
-            if (currentPlayer != null)
+            if (zombie != null)
             {
                 // Guardar la posición y rotación del jugador actual
-                Vector3 playerPosition = currentPlayer.transform.position;
-                Quaternion playerRotation = currentPlayer.transform.rotation;
+                Vector3 playerPosition = zombie.transform.position;
+                Quaternion playerRotation = zombie.transform.rotation;
+                FixedString64Bytes uniqueID = zombie.GetComponent<PlayerController>().playerName.Value;
 
-                // Destruir el jugador actual
-                Destroy(currentPlayer);
+                NetworkObject playerNetObject = zombie.GetComponent<NetworkObject>();
+                ulong clientId = playerNetObject.OwnerClientId;
 
-                // Instanciar el prefab del humano en la misma posición y rotación
-                GameObject human = Instantiate(playerPrefab, playerPosition, playerRotation);
-                human.tag = "Player";
+                // Update the dictionaries with the teams
+                _zombies.Remove(clientId);
+                _humans.Add(clientId);
 
-                // Obtener la referencia a la cámara principal
-                Camera mainCamera = Camera.main;
+                // Despawnear al humano actual
+                playerNetObject.Despawn();
 
-                if (mainCamera != null)
+                // Spawnear el prefab del zombie en la misma posición y rotación
+                playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
+                playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
+                playerNetObject.GetComponent<PlayerController>().isZombie = false;    // Security
+
+                // Set the camera in the player
+                var rpcParams = new RpcParams
                 {
-                    // Obtener el script CameraController de la cámara principal
-                    CameraController cameraController = mainCamera.GetComponent<CameraController>();
+                    Send = new RpcSendParams
+                    {
+                        Target = RpcTarget.Single(clientId, RpcTargetUse.Temp)
+                    }
+                };
+                SetCameraRpc(playerNetObject.NetworkObjectId, rpcParams);
 
-                    if (cameraController != null)
-                    {
-                        // Asignar el humano al script CameraController
-                        cameraController.player = human.transform;
-                    }
-
-                    // Obtener el componente PlayerController del humano instanciado
-                    playerController = human.GetComponent<PlayerController>();
-                    // Asignar el transform de la cámara al PlayerController
-                    if (playerController != null)
-                    {
-                        playerController.enabled = true;
-                        playerController.cameraTransform = mainCamera.transform;
-                        playerController.isZombie = false; // Cambiar el estado a humano
-                        numberOfHumans.Value++; // Aumentar el número de humanos
-                        numberOfZombies.Value--; // Reducir el número de zombis
-                    }
-                    else
-                    {
-                        Debug.LogError("PlayerController no encontrado en el humano instanciado.");
-                    }
+                PlayerController playerController = playerNetObject.GetComponent<PlayerController>();
+                if (playerController != null)
+                {
+                    numberOfZombies.Value--;
+                    numberOfHumans.Value++;
+                    UpdateTeamUI();
                 }
                 else
                 {
-                    Debug.LogError("No se encontró la cámara principal.");
+                    Debug.LogError("PlayerController no encontrado en el humano instanciado.");
                 }
             }
             else
             {
-                Debug.LogError("No se encontró el jugador actual.");
+                Debug.LogError("No se encontró el zombie actual.");
             }
         }
 
