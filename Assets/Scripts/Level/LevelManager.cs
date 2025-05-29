@@ -153,6 +153,9 @@ namespace Level
                 GameInput.InputReader.Instance.onHumanConvert += OnHumanConvert;
                 GameInput.InputReader.Instance.onZombieConvert += OnZombieConvert;
 
+                numberOfHumans.OnValueChanged += CheckFinishByHumansSide;
+                numberOfZombies.OnValueChanged += CheckFinishByZombieSide;
+
                 GenerateTeams();
 
                 GenerateWorldRpc(UnityEngine.Random.Range(0, 10000));
@@ -293,6 +296,38 @@ namespace Level
             Debug.Log($"nPlayers: {_gameManager.nPlayers.Value}");
             Debug.Log($"HUMANS: {_humans.Count}");
             Debug.Log($"ZOMBIES: {_zombies.Count}");
+        }
+
+        private void CheckFinishByZombieSide(int previousValue, int newValue)
+        {
+            if (newValue <= 0)
+            {
+                HumanWin();
+            }
+        }
+
+        private void HumanWin()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void CheckFinishByHumansSide(int previousValue, int newValue)
+        {
+            if (newValue <= 0)
+            {
+                ZombieWin();
+            }
+        }
+
+        private void ZombieWin()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void AbruptClientDisconnectUpdateLists(ulong clientId)
+        {
+            if (_humans.Remove(clientId)) numberOfHumans.Value--;
+            if (_zombies.Remove(clientId)) numberOfZombies.Value--;
         }
 
         private void OnZombieConvert()

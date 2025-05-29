@@ -35,8 +35,8 @@ namespace UI.Menu.States
             switch (option)
             {
                 case MenuButtons.StartGame:
+                    MenuManager.Instance.SetState(new Gameplay());
                     MenuManager.Instance.GameManager.StartGame();
-                    //MenuManager.Instance.SetState(new Gameplay());
                     break;
                 case MenuButtons.CreateLobby:
                     Debug.Log("Create");

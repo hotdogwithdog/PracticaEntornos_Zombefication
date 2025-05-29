@@ -1,3 +1,4 @@
+using Level;
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -88,6 +89,13 @@ namespace Network
             nPlayers.Value--;
             RemoveName(clientId);
             Debug.Log($"Client Disconnected : {clientId}");
+
+            // In case that i are in gameplay i eliminate him in the clients lists of the gameplay
+            LevelManager levelManager = GameObject.FindGameObjectWithTag("LevelManager").GetComponent<LevelManager>();
+            if (levelManager != null)
+            {
+                
+            }
         }
 
         public bool StartClient()

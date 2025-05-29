@@ -50,6 +50,11 @@ namespace GameInput
             // Disable the rest of inputs
         }
 
+        public void DisablePlayer()
+        {
+            _actions.Player.Disable();
+        }
+
         public void DisableAllInput()
         {
             _actions.Player.Disable();
