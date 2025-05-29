@@ -4,6 +4,7 @@ using UnityEngine;
 using Unity.Collections;
 using Unity.Netcode.Components;
 using Level;
+using System;
 
 namespace Player
 {
@@ -33,14 +34,33 @@ namespace Player
             _levelManager = GameObject.FindWithTag("LevelManager").GetComponent<LevelManager>();
         }
 
-        private void OnEnable()
+        public override void OnNetworkSpawn()
         {
             GameInput.InputReader.Instance.onMove += MoveInput;
+
+            // set the name to the visualicer
+            playerName.OnValueChanged += SetTextToVisualicer;
         }
 
-        private void OnDisable()
+        private void SetTextToVisualicer(FixedString64Bytes previousValue, FixedString64Bytes newValue)
+        {
+            Debug.Log($"CALLBACK REACH : {previousValue.ToString()} : {newValue.ToString()}");
+            SetTextToVisualicer(newValue.ToString());
+        }
+
+        private void SetTextToVisualicer(string name)
+        {
+            PrintPlayerName printPlayerName = GetComponentInChildren<PrintPlayerName>();
+            if (printPlayerName != null)
+            {
+                printPlayerName.SetName(name);
+            }
+        }
+
+        public override void OnNetworkDespawn()
         {
             GameInput.InputReader.Instance.onMove -= MoveInput;
+            playerName.OnValueChanged -= SetTextToVisualicer;
         }
 
         private void MoveInput(Vector2 movement)

@@ -337,7 +337,7 @@ namespace Level
 
                 // Spawnear el prefab del zombie en la misma posición y rotación
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
-                playerNetObject.GetComponent<PlayerController>().playerName.Value = name;
+                playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = true;    // Security
 
                 // Set the camera in the player
@@ -412,7 +412,7 @@ namespace Level
 
                 // Spawnear el prefab del zombie en la misma posición y rotación
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
-                playerNetObject.GetComponent<PlayerController>().playerName.Value = name;
+                playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = false;    // Security
 
                 // Set the camera in the player
