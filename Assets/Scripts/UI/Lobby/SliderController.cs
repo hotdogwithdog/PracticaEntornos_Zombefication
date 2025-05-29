@@ -9,7 +9,10 @@ namespace UI.Lobby
     {
         None = 0,
         MaxTime,
-        CoinsDensity
+        CoinsDensity,
+        NumberOfRooms,
+        RoomWidth,
+        RoomLenght
     }
 
     public class SliderController : MonoBehaviour, IDragHandler, IDropHandler

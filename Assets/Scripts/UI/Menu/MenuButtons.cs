@@ -12,6 +12,7 @@
         JoinLobby,
         CreateLobby,
         Resume,
-        MainMenu
+        MainMenu,
+        Restart
     }
 }

@@ -30,7 +30,7 @@ namespace UI.Menu.States
             {
                 MenuManager.Instance.SetState(new Main());
             }
-            else MenuManager.Instance.SetState(new Gameplay());
+            else MenuManager.Instance.SetState(new Pause());
         }
 
         public override void Update(float deltaTime) { }

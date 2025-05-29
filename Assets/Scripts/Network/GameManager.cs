@@ -1,8 +1,11 @@
 using Level;
 using System;
 using System.Collections.Generic;
+using UI.Menu;
+using UI.Menu.States;
 using Unity.Collections;
 using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Network
@@ -12,12 +15,18 @@ namespace Network
         public Level.GameMode gameMode;
         public float maxTime;
         public float coinsDensity;
+        public int numberOfRooms;
+        public int roomWidth;
+        public int roomLenght;
 
-        public GameOptions(Level.GameMode gameMode, float maxTime, float coinsDensity)
+        public GameOptions(Level.GameMode gameMode, float maxTime, float coinsDensity, int numberOfRooms, int roomWidth, int roomLenght)
         {
             this.gameMode = gameMode;
             this.maxTime = maxTime;
             this.coinsDensity = coinsDensity;
+            this.numberOfRooms = numberOfRooms;
+            this.roomWidth = roomWidth;
+            this.roomLenght = roomLenght;
         }
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -25,11 +34,14 @@ namespace Network
             serializer.SerializeValue(ref gameMode);
             serializer.SerializeValue(ref maxTime);
             serializer.SerializeValue(ref coinsDensity);
+            serializer.SerializeValue(ref numberOfRooms);
+            serializer.SerializeValue(ref roomWidth);
+            serializer.SerializeValue(ref roomLenght);
         }
 
         public override string ToString()
         {
-            return $"GameMode: {gameMode}; maxTime: {maxTime}; coinsDensity: {coinsDensity}";
+            return $"GameMode: {gameMode}; maxTime: {maxTime}; coinsDensity: {coinsDensity}; numberOfRooms: {numberOfRooms}; roomWidth: {roomWidth}; roomLenght: {roomLenght}";
         }
     }
 
@@ -120,6 +132,8 @@ namespace Network
         {
             Debug.Log("Game Starting");
 
+            SetGameplayStateInAllClientsRpc();
+
             NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
@@ -143,19 +157,46 @@ namespace Network
         [Rpc(SendTo.Server)]
         public void SetGameModeRpc(Level.GameMode gameMode)
         {
-            gameOptions.Value = new GameOptions(gameMode, gameOptions.Value.maxTime, gameOptions.Value.coinsDensity); 
+            gameOptions.Value = new GameOptions(gameMode, gameOptions.Value.maxTime, gameOptions.Value.coinsDensity, 
+                gameOptions.Value.numberOfRooms, gameOptions.Value.roomWidth, gameOptions.Value.roomLenght); 
         }
         [Rpc(SendTo.Server)]
         public void SetMaxTimeRpc(float maxTime)
         {
-            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, maxTime, gameOptions.Value.coinsDensity);
+            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, maxTime, gameOptions.Value.coinsDensity,
+                gameOptions.Value.numberOfRooms, gameOptions.Value.roomWidth, gameOptions.Value.roomLenght);
         }
         [Rpc(SendTo.Server)]
         public void SetCoinsDensityRpc(float coinsDensity)
         {
-            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, gameOptions.Value.maxTime, coinsDensity);
+            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, gameOptions.Value.maxTime, coinsDensity,
+                gameOptions.Value.numberOfRooms, gameOptions.Value.roomWidth, gameOptions.Value.roomLenght);
+        }
+        [Rpc(SendTo.Server)]
+        public void SetNumberOfRoomsRpc(int numberOfRooms)
+        {
+            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, gameOptions.Value.maxTime, gameOptions.Value.coinsDensity,
+                numberOfRooms, gameOptions.Value.roomWidth, gameOptions.Value.roomLenght);
+        }
+        [Rpc(SendTo.Server)]
+        public void SetRoomWidthRpc(int width)
+        {
+            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, gameOptions.Value.maxTime, gameOptions.Value.coinsDensity,
+                gameOptions.Value.numberOfRooms, width, gameOptions.Value.roomLenght);
+        }
+        [Rpc(SendTo.Server)]
+        public void SetRoomLenghtRpc(int lenght)
+        {
+            gameOptions.Value = new GameOptions(gameOptions.Value.gameMode, gameOptions.Value.maxTime, gameOptions.Value.coinsDensity,
+                gameOptions.Value.numberOfRooms, gameOptions.Value.roomWidth, lenght);
         }
         #endregion
+
+        [Rpc(SendTo.NotServer)]
+        private void SetGameplayStateInAllClientsRpc()
+        {
+            MenuManager.Instance.SetState(new Gameplay());
+        }
 
         private void AddName(ulong clientId)
         {

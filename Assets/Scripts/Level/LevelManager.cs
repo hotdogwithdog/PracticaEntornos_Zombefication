@@ -8,6 +8,8 @@ using Player;
 using Unity.Netcode;
 using Network;
 using Unity.Collections;
+using UI.Menu;
+using UI.Menu.States;
 
 namespace Level
 {
@@ -52,8 +54,13 @@ namespace Level
         // Referencias a los elementos de texto en el canvas
         private TextMeshProUGUI humansText;
         private TextMeshProUGUI zombiesText;
+        private TextMeshProUGUI coinsCollectedText;
         private TextMeshProUGUI gameModeText;
         private TextMeshProUGUI gameModeConditionValueText;
+
+
+        private string _humanWinText = "HUMANS WINS";
+        private string _zombieWinText = "ZOMBIES WINS";
 
         private int CoinsGenerated = 0;
 
@@ -88,6 +95,7 @@ namespace Level
                     // Buscar los TextMeshProUGUI llamados "HumansValue" y "ZombiesValue" dentro del Panel
                     Transform humansTextTransform = panel.Find("HumansValue");
                     Transform zombiesTextTransform = panel.Find("ZombiesValue");
+                    Transform coinsCollectedTextTransform = panel.Find("CoinsValue");
                     Transform gameModeTextTransform = panel.Find("GameMode");
                     Transform gameModeConditionTextTransform = panel.Find("GameModeConditionValue");
 
@@ -99,6 +107,11 @@ namespace Level
                     if (zombiesTextTransform != null)
                     {
                         zombiesText = zombiesTextTransform.GetComponent<TextMeshProUGUI>();
+                    }
+
+                    if (coinsCollectedTextTransform != null)
+                    {
+                        coinsCollectedText = coinsCollectedTextTransform.GetComponent<TextMeshProUGUI>();
                     }
 
                     if (gameModeTextTransform != null)
@@ -118,6 +131,8 @@ namespace Level
 
         private void Update()
         {
+            if (!IsSpawned) return;
+
             if (_gameOptions.gameMode == GameMode.Tiempo)
             {
                 // Lógica para el modo de juego basado en tiempo
@@ -129,11 +144,12 @@ namespace Level
                 HandleCoinBasedGameMode();
             }
 
+            UpdateCoinsCollected();
             UpdateTeamUI();
 
-            if (isGameOver)
+            if (IsHost && isGameOver)
             {
-                ShowGameOverPanel();
+                HumanWin();
             }
         }
 
@@ -145,6 +161,7 @@ namespace Level
             _gameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
 
             _gameOptions = _gameManager.gameOptions.Value;
+            Debug.Log($"GAME OPTIONS IN LEVEL MANAGER: {_gameOptions.ToString()}");
 
             UpdateGameModeUI();
 
@@ -182,7 +199,7 @@ namespace Level
         {
             if (levelBuilder != null)
             {
-                levelBuilder.Build(seed);
+                levelBuilder.Build(seed, _gameOptions);
                 humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
                 zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
                 Debug.Log("SPAWN POINTS PICKED");
@@ -263,6 +280,12 @@ namespace Level
             }
         }
 
+        [Rpc(SendTo.NotServer)]
+        private void FinishGameInAllClientsRpc(FixedString64Bytes finalText)
+        {
+            MenuManager.Instance.SetState(new FinalScreen(false, finalText.ToString()));
+        }
+
         #endregion
 
         #region Team management methods
@@ -308,7 +331,9 @@ namespace Level
 
         private void HumanWin()
         {
-            throw new NotImplementedException();
+            MenuManager.Instance.SetState(new FinalScreen(true, _humanWinText));
+            // Rpc for change the state in clients
+            FinishGameInAllClientsRpc(_humanWinText);
         }
 
         private void CheckFinishByHumansSide(int previousValue, int newValue)
@@ -321,7 +346,9 @@ namespace Level
 
         private void ZombieWin()
         {
-            throw new NotImplementedException();
+            MenuManager.Instance.SetState(new FinalScreen(true, _zombieWinText));
+            // Rpc for change the state in clients
+            FinishGameInAllClientsRpc(_zombieWinText);
         }
 
         public void AbruptClientDisconnectUpdateLists(ulong clientId)
@@ -578,6 +605,14 @@ namespace Level
                 gameModeConditionValueText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
             }
 
+        }
+
+        private void UpdateCoinsCollected()
+        {
+            if (coinsCollectedText != null)
+            {
+                coinsCollectedText.text = $"{coinsCollected.Value}";
+            }
         }
 
         public void CoinCollected(int coinId)
