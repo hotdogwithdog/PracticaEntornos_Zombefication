@@ -1,6 +1,7 @@
 ﻿using System;
 using TMPro;
 using UI.Menu;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -64,12 +65,36 @@ namespace UI.Lobby
             _roomWidthSldController.OnDropSlider += RoomWidthChange;
             _roomLenghtSldController.OnDropSlider += RoomLenghtChange;
 
+            if (MenuManager.Instance.GameManager.IsHostInit)
+            {
+                InitHost();
+            }
+            else
+            {
+                _maxTimeSldController.gameObject.SetActive(false);
+                _coinsDensitySldController.gameObject.SetActive(false);
+                _numberOfRoomsSldController.gameObject.SetActive(false);
+                _roomWidthSldController.gameObject.SetActive(false);
+                _roomLenghtSldController.gameObject.SetActive(false);
+
+                MenuManager.Instance.GameManager.OnHostInit += InitHost;
+            }
+        }
+
+        private void InitHost()
+        {
             MenuManager.Instance.GameManager.SetMaxTimeRpc(300);
             MenuManager.Instance.GameManager.SetCoinsDensityRpc(30);
             MenuManager.Instance.GameManager.SetNumberOfRoomsRpc(4);
             MenuManager.Instance.GameManager.SetRoomWidthRpc(5);
             MenuManager.Instance.GameManager.SetRoomLenghtRpc(5);
             MenuManager.Instance.GameManager.SetGameModeRpc(_gameModes[_gameModeIndex]);
+
+            _maxTimeSldController.gameObject.SetActive(true);
+            _coinsDensitySldController.gameObject.SetActive(true);
+            _numberOfRoomsSldController.gameObject.SetActive(true);
+            _roomWidthSldController.gameObject.SetActive(true);
+            _roomLenghtSldController.gameObject.SetActive(true);
         }
 
         private void OnDestroy()
@@ -84,6 +109,7 @@ namespace UI.Lobby
             }
             if (_maxTimeSldController != null) _maxTimeSldController.OnDropSlider -= MaxTimeChange;
             if (_coinsDensitySldController != null) _coinsDensitySldController.OnDropSlider -= CoinsDensityChange;
+            MenuManager.Instance.GameManager.OnHostInit -= InitHost;
         }
 
         private void ChangeGameModeText(Level.GameMode gameMode)

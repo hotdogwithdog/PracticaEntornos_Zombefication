@@ -7,23 +7,24 @@ using UnityEngine;
 
 public class LobbyCodesManager : MonoBehaviour
 {
-    private TMP_InputField _joinCodeInput;
-    private TextMeshProUGUI _joinCodeText;
+    [SerializeField] private TMP_InputField _joinCodeInput;
+    [SerializeField] private TextMeshProUGUI _joinCodeText;
 
     public string GetJoinCodeInputText() {  return _joinCodeInput.text; }
 
-    private void Start()
+    public void InitHost()
     {
-        if (NetworkManager.Singleton.IsHost)
-        {
-            _joinCodeText.gameObject.SetActive(true);
-            _joinCodeText.text = MenuManager.Instance.GameManager.JoinCode;
-            _joinCodeInput.gameObject.SetActive(false);
-        }
-        else
-        {
-            _joinCodeInput.gameObject.SetActive(true);
-            _joinCodeText.gameObject.SetActive(false);
-        }
+        Debug.Log("HOST CODES MANAGER");
+        _joinCodeText.gameObject.SetActive(true);
+        _joinCodeText.text = MenuManager.Instance.GameManager.JoinCode;
+        _joinCodeInput.gameObject.SetActive(false);
+        MenuManager.Instance.GameManager.OnHostInit -= InitHost;
+    }
+
+    public void InitClient()
+    {
+        Debug.Log("CLIENT CODES MANAGER");
+        _joinCodeInput.gameObject.SetActive(true);
+        _joinCodeText.gameObject.SetActive(false);
     }
 }
