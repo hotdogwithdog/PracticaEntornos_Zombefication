@@ -76,6 +76,12 @@ namespace UI.Lobby
                 _numberOfRoomsSldController.gameObject.SetActive(false);
                 _roomWidthSldController.gameObject.SetActive(false);
                 _roomLenghtSldController.gameObject.SetActive(false);
+                _gameModeText.gameObject.SetActive(false);
+
+                foreach (OptionMove optionMove in _gameModeMoves)
+                {
+                    optionMove.gameObject.SetActive(false);
+                }
 
                 MenuManager.Instance.GameManager.OnHostInit += InitHost;
             }
@@ -83,18 +89,24 @@ namespace UI.Lobby
 
         private void InitHost()
         {
+            MenuManager.Instance.GameManager.SetGameModeRpc(_gameModes[_gameModeIndex]);
             MenuManager.Instance.GameManager.SetMaxTimeRpc(300);
             MenuManager.Instance.GameManager.SetCoinsDensityRpc(30);
             MenuManager.Instance.GameManager.SetNumberOfRoomsRpc(4);
             MenuManager.Instance.GameManager.SetRoomWidthRpc(5);
             MenuManager.Instance.GameManager.SetRoomLenghtRpc(5);
-            MenuManager.Instance.GameManager.SetGameModeRpc(_gameModes[_gameModeIndex]);
 
             _maxTimeSldController.gameObject.SetActive(true);
             _coinsDensitySldController.gameObject.SetActive(true);
             _numberOfRoomsSldController.gameObject.SetActive(true);
             _roomWidthSldController.gameObject.SetActive(true);
             _roomLenghtSldController.gameObject.SetActive(true);
+
+            _gameModeText.gameObject.SetActive(true);
+            foreach (OptionMove optionMove in _gameModeMoves)
+            {
+                optionMove.gameObject.SetActive(true);
+            }
         }
 
         private void OnDestroy()

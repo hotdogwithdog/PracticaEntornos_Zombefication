@@ -31,9 +31,10 @@ namespace Level
         #region OnlyServer
         private HashSet<ulong> _zombies;
         private HashSet<ulong> _humans;
-        private int indexForHumans = 0;
-        private int indexForZombies = 0;
+        private int _indexForHumans = 0;
+        private int _indexForZombies = 0;
         private bool[] _coinsPicked;
+        private bool _finalCallPerformed = false;
         #endregion
 
         private GameManager _gameManager;
@@ -147,9 +148,10 @@ namespace Level
             UpdateCoinsCollected();
             UpdateTeamUI();
 
-            if (IsHost && isGameOver)
+            if (IsHost && isGameOver && !_finalCallPerformed)
             {
                 HumanWin();
+                _finalCallPerformed = true;
             }
         }
 
@@ -221,13 +223,13 @@ namespace Level
             GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
             if (_humans.Contains(clientId))
             {
-                SpawnPlayer(true, player, clientId, humanSpawnPoints[indexForHumans % humanSpawnPoints.Count]);
-                indexForHumans++;
+                SpawnPlayer(true, player, clientId, humanSpawnPoints[_indexForHumans % humanSpawnPoints.Count]);
+                _indexForHumans++;
             }
             else if (_zombies.Contains(clientId))
             {
-                SpawnPlayer(false, player, clientId, zombieSpawnPoints[indexForZombies % zombieSpawnPoints.Count]);
-                indexForZombies++;
+                SpawnPlayer(false, player, clientId, zombieSpawnPoints[_indexForZombies % zombieSpawnPoints.Count]);
+                _indexForZombies++;
             }
             else
             {
