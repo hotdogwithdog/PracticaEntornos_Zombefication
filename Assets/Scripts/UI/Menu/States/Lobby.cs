@@ -75,6 +75,7 @@ namespace UI.Menu.States
                         MenuManager.Instance.GameManager.ShutDown();
                         _startGameButtonObject.SetActive(false);
                         _lobbyOptions.SetActive(false);
+                        _lobbyCodeObjects.SetActive(false);
                         _hostGameButtonObject.SetActive(true);
                         _joinGameButtonObject.SetActive(true);
                     }
