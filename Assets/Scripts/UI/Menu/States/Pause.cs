@@ -20,14 +20,6 @@ namespace UI.Menu.States
         {
             if (newScene.name == "MenuScene")
             {
-                if (NetworkManager.Singleton.IsHost)
-                {
-                    MenuManager.Instance.GameManager.ShutDown();
-                }
-                else
-                {
-                    MenuManager.Instance.GameManager.DisconectClient();
-                }
                 MenuManager.Instance.SetState(new Main());
             }
         }
@@ -46,9 +38,14 @@ namespace UI.Menu.States
                     if (NetworkManager.Singleton.IsHost)
                     {
                         MenuManager.Instance.GameManager.ChangeToMainMenuSceneRpc();
+                        MenuManager.Instance.GameManager.ShutDown();
+                        MenuManager.Instance.GameManager.DestroyAllManagers();
+                        SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
                     }
                     else
                     {
+                        MenuManager.Instance.GameManager.DisconectClient();
+                        MenuManager.Instance.GameManager.DestroyAllManagers();
                         SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
                     }
                     break;

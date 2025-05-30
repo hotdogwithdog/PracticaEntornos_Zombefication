@@ -113,7 +113,16 @@ namespace Network
 
         public bool StartClient()
         {
+            SceneManager.activeSceneChanged += OnSceneChange;
             return NetworkManager.Singleton.StartClient();
+        }
+
+        private void OnSceneChange(Scene oldScene, Scene newScene)
+        {
+            if (newScene.name == "MenuScene")
+            {
+                MenuManager.Instance.SetState(new Main());
+            }
         }
 
         public void ShutDown()
@@ -158,7 +167,8 @@ namespace Network
             // i restart the all network manager of the client.
             NetworkManager.Singleton.Shutdown();
             NetworkManager.Singleton.SetSingleton();
-            DestroyNetworkManagerCopies();
+            DestroyAllManagers();
+            SceneManager.LoadScene("MenuScene");
         }
         #endregion
 
@@ -221,9 +231,9 @@ namespace Network
 
         public void DestroyAllManagers()
         {
-            GameObject.Destroy(MenuManager.Instance.GameManager.gameObject);
-            GameObject.Destroy(NetworkManager.Singleton.gameObject);
-            GameObject.Destroy(MenuManager.Instance.gameObject);
+            if (MenuManager.Instance != null && MenuManager.Instance.GameManager != null) GameObject.Destroy(MenuManager.Instance.GameManager.gameObject);
+            if (NetworkManager.Singleton != null) GameObject.Destroy(NetworkManager.Singleton.gameObject);
+            if (MenuManager.Instance != null) GameObject.Destroy(MenuManager.Instance.gameObject);
         }
 
         private void AddName(ulong clientId)

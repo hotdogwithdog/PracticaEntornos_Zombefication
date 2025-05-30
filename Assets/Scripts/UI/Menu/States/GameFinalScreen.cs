@@ -36,7 +36,6 @@ namespace UI.Menu.States
         {
             if (newScene.name == "MenuScene")
             {
-                MenuManager.Instance.GameManager.DestroyNetworkManagerCopies();
                 MenuManager.Instance.SetState(new Main());
             }
         }
