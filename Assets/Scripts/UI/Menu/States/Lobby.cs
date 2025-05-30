@@ -12,6 +12,7 @@ namespace UI.Menu.States
         private GameObject _hostGameButtonObject;
         private GameObject _joinGameButtonObject;
         private GameObject _lobbyOptions;
+        private GameObject _lobbyCodeObjects;
         public Lobby() : base("Menus/Lobby") { }
 
         public override void Enter()
@@ -28,6 +29,7 @@ namespace UI.Menu.States
 
             _lobbyOptions = _menu.GetComponentInChildren<LobbyOptionsManager>().gameObject;
             _lobbyOptions.SetActive(false);
+            _lobbyCodeObjects = _menu.GetComponentInChildren<LobbyCodesManager>().gameObject;
         }
 
         protected override void OnOptionClicked(MenuButtons option)
@@ -40,7 +42,7 @@ namespace UI.Menu.States
                     break;
                 case MenuButtons.CreateLobby:
                     Debug.Log("Create");
-                    MenuManager.Instance.GameManager.StartHost();
+                    MenuManager.Instance.GameManager.StartHostRelay();
                     _startGameButtonObject.SetActive(true);
                     _lobbyOptions.SetActive(true);
                     _hostGameButtonObject.SetActive(false);
@@ -48,7 +50,7 @@ namespace UI.Menu.States
                     break;
                 case MenuButtons.JoinLobby:
                     Debug.Log("Join");
-                    MenuManager.Instance.GameManager.StartClient();
+                    MenuManager.Instance.GameManager.StartClientRelay(_lobbyCodeObjects.GetComponent<LobbyCodesManager>().GetJoinCodeInputText());
                     _hostGameButtonObject.SetActive(false);
                     _joinGameButtonObject.SetActive(false);
                     break;

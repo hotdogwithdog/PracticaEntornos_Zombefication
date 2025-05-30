@@ -1,13 +1,16 @@
-using Level;
-using System;
 using System.Collections.Generic;
+using Level;
 using UI.Menu;
 using UI.Menu.States;
 using Unity.Collections;
 using Unity.Netcode;
-using Unity.VisualScripting;
+using Unity.Netcode.Transports.UTP;
+using Unity.Networking.Transport.Relay;
+using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static UnityEditor.FilePathAttribute;
 
 namespace Network
 {
@@ -55,9 +58,12 @@ namespace Network
         public NetworkVariable<int> nPlayers = new NetworkVariable<int>(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
         #endregion
 
+        [SerializeField] private int maxConnections = 6;
+
         #region OnlyServer
         private Dictionary<ulong, FixedString64Bytes> _clientPlayerNames;
         private Utilities.UniqueIdGenerator _idGenerator;
+        public string JoinCode {  get; private set; }
         #endregion
 
         #region ConectionMethods
@@ -72,7 +78,27 @@ namespace Network
             Debug.LogWarning("GAME MANAGER DESPAWN OF NET");
         }
 
-        public bool StartHost()
+        public async void StartHostRelay()
+        {
+            try
+            {
+                Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
+
+                JoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+
+                RelayServerData serverData = new RelayServerData(allocation, "udp");
+
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(serverData);
+
+                StartHost();
+            }
+            catch (RelayServiceException e)
+            {
+                Debug.LogError($"ERROR CREATING THE RELAY: {e.ToString()}");
+            }
+        }
+
+        private bool StartHost()
         {
             bool state = NetworkManager.Singleton.StartHost();
             Debug.Log($"Server init : {state}");
@@ -111,7 +137,18 @@ namespace Network
             }
         }
 
-        public bool StartClient()
+        public async void StartClientRelay(string joinCode)
+        {
+            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+
+            RelayServerData serverData = new RelayServerData(joinAllocation, "udp");
+
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(serverData);
+
+            StartClient();
+        }
+
+        private bool StartClient()
         {
             SceneManager.activeSceneChanged += OnSceneChange;
             return NetworkManager.Singleton.StartClient();
