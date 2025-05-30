@@ -13,7 +13,7 @@ namespace UI.Menu
 
         private void Start()
         {
-            GameManager = GetComponent<GameManager>();
+            GameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
             SetState(new Main());
         }
 

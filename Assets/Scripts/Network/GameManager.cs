@@ -7,6 +7,7 @@ using Unity.Collections;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Network
 {
@@ -106,7 +107,7 @@ namespace Network
             LevelManager levelManager = GameObject.FindGameObjectWithTag("LevelManager").GetComponent<LevelManager>();
             if (levelManager != null)
             {
-                
+                levelManager.AbruptClientDisconnectUpdateLists(clientId);
             }
         }
 
@@ -126,6 +127,7 @@ namespace Network
             NetworkManager.Singleton.Shutdown();
 
             NetworkManager.Singleton.SetSingleton();
+            DestroyNetworkManagerCopies();
         }
 
         public void StartGame()
@@ -137,14 +139,26 @@ namespace Network
             NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
+        public void DestroyNetworkManagerCopies()
+        {
+            GameObject[] netManagers = GameObject.FindGameObjectsWithTag("NetworkManager");
+            for (int i = 0; i < netManagers.Length; ++i)
+            {
+                if (netManagers[i].GetComponent<NetworkManager>() != NetworkManager.Singleton)
+                {
+                    Destroy(netManagers[i]);
+                }
+            }
+        }
+
         public void DisconectClient()
         {
             Debug.Log($"Client Disconnected: {NetworkManager.Singleton.LocalClientId}");
             // The client can't disconnect hitself of the server in a clean way without an Rpc so for don't convert this class that is a singleton
             // i restart the all network manager of the client.
             NetworkManager.Singleton.Shutdown();
-
             NetworkManager.Singleton.SetSingleton();
+            DestroyNetworkManagerCopies();
         }
         #endregion
 
@@ -196,6 +210,18 @@ namespace Network
         private void SetGameplayStateInAllClientsRpc()
         {
             MenuManager.Instance.SetState(new Gameplay());
+        }
+
+        [Rpc(SendTo.ClientsAndHost)]
+        public void ChangeToMainMenuSceneRpc()
+        {
+            SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
+        }
+
+        [Rpc(SendTo.Server)]
+        private void DisconnectClientRpc(ulong clientId)
+        {
+            NetworkManager.Singleton.DisconnectClient(clientId);
         }
 
         private void AddName(ulong clientId)

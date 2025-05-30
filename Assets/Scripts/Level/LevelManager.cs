@@ -217,6 +217,7 @@ namespace Level
         private void SpawnMyPlayerObjectRpc(ulong clientId)
         {
             Debug.Log($"TP of the client {clientId} is in process");
+            Debug.Log($"NETWORK MANAGER: {NetworkManager.Singleton}");
             GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
             if (_humans.Contains(clientId))
             {
@@ -401,6 +402,7 @@ namespace Level
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
                 playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = true;    // Security
+                NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = playerNetObject;
 
                 // Set the camera in the player
                 var rpcParams = new RpcParams
@@ -476,6 +478,7 @@ namespace Level
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
                 playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = false;    // Security
+                NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = playerNetObject;
 
                 // Set the camera in the player
                 var rpcParams = new RpcParams
@@ -528,6 +531,7 @@ namespace Level
                 networkObject.GetComponent<PlayerController>().playerName.Value = name;
                 networkObject.GetComponent<PlayerController>().isZombie = true;    // Security
             }
+            NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = networkObject;
             Debug.Log($"Spawn of a {((isHuman) ? "human" : "zombie")} that is the client {clientId} in the position {spawnPosition}");
             // Rpc for set the camera on the client that are this player
             var rpcParams = new RpcParams

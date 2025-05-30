@@ -1,7 +1,11 @@
-﻿using TMPro;
+﻿using System;
+using System.Runtime.CompilerServices;
+using TMPro;
 using UI.Menu.Navigation;
+using Unity.Netcode;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace UI.Menu.States
 {
@@ -25,6 +29,23 @@ namespace UI.Menu.States
             }
 
             GameObject.FindWithTag("FinishText").GetComponent<TextMeshProUGUI>().text = _finalText;
+            SceneManager.activeSceneChanged += OnSceneChange;
+        }
+
+        private void OnSceneChange(Scene oldScene, Scene newScene)
+        {
+            if (newScene.name == "MenuScene")
+            {
+                MenuManager.Instance.GameManager.DestroyNetworkManagerCopies();
+                MenuManager.Instance.SetState(new Main());
+            }
+        }
+
+        private void DestroyAllManagers()
+        {
+            GameObject.Destroy(MenuManager.Instance.GameManager.gameObject);
+            GameObject.Destroy(NetworkManager.Singleton.gameObject);
+            GameObject.Destroy(MenuManager.Instance.gameObject);
         }
 
         protected override void OnOptionClicked(MenuButtons option)
@@ -36,14 +57,30 @@ namespace UI.Menu.States
                     MenuManager.Instance.SetState(new Gameplay());
                     break;
                 case MenuButtons.MainMenu:
-                    MenuManager.Instance.GameManager.ShutDown();
-                    MenuManager.Instance.SetState(new Main());
+                    if (_isHost)
+                    {
+                        MenuManager.Instance.GameManager.ChangeToMainMenuSceneRpc();
+                        MenuManager.Instance.GameManager.ShutDown();
+                    }
+                    else
+                    {
+                        MenuManager.Instance.GameManager.DisconectClient();
+                        DestroyAllManagers();
+                        SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
+                    }
                     break;
                 default:
                     Debug.LogError($"ERROR_UNKOWN_OPTION: {option}");
                     return;
             }
         }
+
+        public override void Exit()
+        {
+            base.Exit();
+            SceneManager.activeSceneChanged -= OnSceneChange;
+        }
+
         public override void Update(float deltaTime) { }
     }
 }

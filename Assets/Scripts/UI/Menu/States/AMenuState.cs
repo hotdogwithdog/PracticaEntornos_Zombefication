@@ -27,8 +27,11 @@ namespace UI.Menu.States
 
         public virtual void Exit()
         {
-            _menu.GetComponentInChildren<MenuOptionsGroup>().onOptionClicked -= OnOptionClicked;
-            GameObject.Destroy(_menu);
+            if (_menu != null)
+            {
+                _menu.GetComponentInChildren<MenuOptionsGroup>().onOptionClicked -= OnOptionClicked;
+                GameObject.Destroy(_menu);
+            }
         }
 
         public abstract void Update(float deltaTime);

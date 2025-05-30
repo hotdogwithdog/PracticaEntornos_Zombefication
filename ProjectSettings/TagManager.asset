@@ -9,6 +9,7 @@ TagManager:
   - GameManager
   - LevelManager
   - FinishText
+  - NetworkManager
   layers:
   - Default
   - TransparentFX
