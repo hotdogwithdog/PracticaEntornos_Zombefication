@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Level;
 using UI.Menu;
@@ -6,11 +7,12 @@ using Unity.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
+using Unity.Services.Authentication;
+using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using static UnityEditor.FilePathAttribute;
 
 namespace Network
 {
@@ -63,10 +65,27 @@ namespace Network
         #region OnlyServer
         private Dictionary<ulong, FixedString64Bytes> _clientPlayerNames;
         private Utilities.UniqueIdGenerator _idGenerator;
-        public string JoinCode {  get; private set; }
+        public string JoinCode { get; private set; }
         #endregion
 
+        public bool IsHostInit { get; private set; }
+
+        #region Events
+        public Action OnHostInit = delegate { };
+        #endregion
+
+
         #region ConectionMethods
+
+        private async void Awake()
+        {
+            await UnityServices.InitializeAsync();
+
+            AuthenticationService.Instance.SignedIn += () => Debug.Log($"Signed relay with: {AuthenticationService.Instance.PlayerId}");
+
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        }
+
         public override void OnNetworkSpawn()
         {
             DontDestroyOnLoad(this);
@@ -111,6 +130,9 @@ namespace Network
                 nPlayers.Value = 1; // The actual host
                 NetworkManager.Singleton.OnClientConnectedCallback += ClientConnect;
                 NetworkManager.Singleton.OnClientDisconnectCallback += ClientDisconnect;
+
+                IsHostInit = true;
+                OnHostInit.Invoke();
             }
             return state;
         }

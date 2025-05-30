@@ -30,6 +30,15 @@ namespace UI.Menu.States
             _lobbyOptions = _menu.GetComponentInChildren<LobbyOptionsManager>().gameObject;
             _lobbyOptions.SetActive(false);
             _lobbyCodeObjects = _menu.GetComponentInChildren<LobbyCodesManager>().gameObject;
+            if (NetworkManager.Singleton.IsHost)
+            {
+                _lobbyCodeObjects.SetActive(false);
+            }
+            else
+            {
+                _lobbyCodeObjects.SetActive(true);
+                _lobbyCodeObjects.GetComponent<LobbyCodesManager>().InitClient();
+            }
         }
 
         protected override void OnOptionClicked(MenuButtons option)
@@ -47,6 +56,12 @@ namespace UI.Menu.States
                     _lobbyOptions.SetActive(true);
                     _hostGameButtonObject.SetActive(false);
                     _joinGameButtonObject.SetActive(false);
+                    _lobbyCodeObjects.SetActive(true);
+                    if (!MenuManager.Instance.GameManager.IsHostInit)
+                    {
+                        MenuManager.Instance.GameManager.OnHostInit += _lobbyCodeObjects.GetComponent<LobbyCodesManager>().InitHost;
+                    }
+                    else _lobbyCodeObjects.GetComponent<LobbyCodesManager>().InitHost();
                     break;
                 case MenuButtons.JoinLobby:
                     Debug.Log("Join");
@@ -60,6 +75,7 @@ namespace UI.Menu.States
                         MenuManager.Instance.GameManager.ShutDown();
                         _startGameButtonObject.SetActive(false);
                         _lobbyOptions.SetActive(false);
+                        _lobbyCodeObjects.SetActive(false);
                         _hostGameButtonObject.SetActive(true);
                         _joinGameButtonObject.SetActive(true);
                     }
