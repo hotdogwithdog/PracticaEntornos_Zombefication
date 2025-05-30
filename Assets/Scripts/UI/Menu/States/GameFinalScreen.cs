@@ -41,13 +41,6 @@ namespace UI.Menu.States
             }
         }
 
-        private void DestroyAllManagers()
-        {
-            GameObject.Destroy(MenuManager.Instance.GameManager.gameObject);
-            GameObject.Destroy(NetworkManager.Singleton.gameObject);
-            GameObject.Destroy(MenuManager.Instance.gameObject);
-        }
-
         protected override void OnOptionClicked(MenuButtons option)
         {
             switch (option)
@@ -61,11 +54,13 @@ namespace UI.Menu.States
                     {
                         MenuManager.Instance.GameManager.ChangeToMainMenuSceneRpc();
                         MenuManager.Instance.GameManager.ShutDown();
+                        MenuManager.Instance.GameManager.DestroyAllManagers();
+                        SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
                     }
                     else
                     {
                         MenuManager.Instance.GameManager.DisconectClient();
-                        DestroyAllManagers();
+                        MenuManager.Instance.GameManager.DestroyAllManagers();
                         SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
                     }
                     break;

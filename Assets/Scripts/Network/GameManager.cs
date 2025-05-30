@@ -212,16 +212,18 @@ namespace Network
             MenuManager.Instance.SetState(new Gameplay());
         }
 
-        [Rpc(SendTo.ClientsAndHost)]
+        [Rpc(SendTo.NotServer)]
         public void ChangeToMainMenuSceneRpc()
         {
+            DestroyAllManagers();
             SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
         }
 
-        [Rpc(SendTo.Server)]
-        private void DisconnectClientRpc(ulong clientId)
+        public void DestroyAllManagers()
         {
-            NetworkManager.Singleton.DisconnectClient(clientId);
+            GameObject.Destroy(MenuManager.Instance.GameManager.gameObject);
+            GameObject.Destroy(NetworkManager.Singleton.gameObject);
+            GameObject.Destroy(MenuManager.Instance.gameObject);
         }
 
         private void AddName(ulong clientId)
