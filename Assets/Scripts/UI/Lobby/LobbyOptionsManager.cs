@@ -15,6 +15,10 @@ namespace UI.Lobby
 
         private SliderController _maxTimeSldController;
         private SliderController _coinsDensitySldController;
+        private SliderController _numberOfRoomsSldController;
+        private SliderController _roomWidthSldController;
+        private SliderController _roomLenghtSldController;
+
 
         private void Start()
         {
@@ -32,12 +36,42 @@ namespace UI.Lobby
 
             foreach (SliderController controller in GetComponentsInChildren<SliderController>())
             {
-                if (controller.GetSldOptionToControl() == sldOptionToControl.MaxTime) _maxTimeSldController = controller;
-                else if (controller.GetSldOptionToControl() == sldOptionToControl.CoinsDensity) _coinsDensitySldController = controller;
+                switch(controller.GetSldOptionToControl())
+                {
+                    case sldOptionToControl.MaxTime:
+                        _maxTimeSldController = controller;
+                        break;
+                    case sldOptionToControl.CoinsDensity:
+                        _coinsDensitySldController = controller;
+                        break;
+                    case sldOptionToControl.NumberOfRooms:
+                        _numberOfRoomsSldController = controller;
+                        break;
+                    case sldOptionToControl.RoomWidth:
+                        _roomWidthSldController = controller;
+                        break;
+                    case sldOptionToControl.RoomLenght:
+                        _roomLenghtSldController = controller;
+                        break;
+                    default:
+                        Debug.LogError($"ERROR UNKNOWN SLIDER TYPE: {controller.GetSldOptionToControl()}");
+                        break;
+                }
             }
             _maxTimeSldController.OnDropSlider += MaxTimeChange;
             _coinsDensitySldController.OnDropSlider += CoinsDensityChange;
+            _numberOfRoomsSldController.OnDropSlider += NumberOfRoomsChange;
+            _roomWidthSldController.OnDropSlider += RoomWidthChange;
+            _roomLenghtSldController.OnDropSlider += RoomLenghtChange;
+
+            MenuManager.Instance.GameManager.SetMaxTimeRpc(300);
+            MenuManager.Instance.GameManager.SetCoinsDensityRpc(30);
+            MenuManager.Instance.GameManager.SetNumberOfRoomsRpc(4);
+            MenuManager.Instance.GameManager.SetRoomWidthRpc(5);
+            MenuManager.Instance.GameManager.SetRoomLenghtRpc(5);
+            MenuManager.Instance.GameManager.SetGameModeRpc(_gameModes[_gameModeIndex]);
         }
+
         private void OnDestroy()
         {
             // This ifs are because the clients are not subscribed (the object is disable and for that reason the Start is not call in the clients), but the destructor yes
@@ -73,11 +107,27 @@ namespace UI.Lobby
             Debug.Log($"The control of {control} has the value {value}");
             MenuManager.Instance.GameManager.SetCoinsDensityRpc(value);
         }
-
         private void MaxTimeChange(float value, sldOptionToControl control)
         {
             Debug.Log($"The control of {control} has the value {value}");
             MenuManager.Instance.GameManager.SetMaxTimeRpc(value);
+        }
+        private void RoomLenghtChange(float value, sldOptionToControl control)
+        {
+            Debug.Log($"The control of {control} has the value {value}");
+            if (((int)value) == 0) value++;    // The rooms must be even size
+            MenuManager.Instance.GameManager.SetRoomLenghtRpc((int)value);
+        }
+        private void RoomWidthChange(float value, sldOptionToControl control)
+        {
+            Debug.Log($"The control of {control} has the value {value}");
+            if (((int)value) % 2 == 0) value++;    // The rooms must be even size
+            MenuManager.Instance.GameManager.SetRoomWidthRpc((int)value);
+        }
+        private void NumberOfRoomsChange(float value, sldOptionToControl control)
+        {
+            Debug.Log($"The control of {control} has the value {value}");
+            MenuManager.Instance.GameManager.SetNumberOfRoomsRpc((int)value);
         }
 
 

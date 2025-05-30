@@ -10,6 +10,9 @@
         Lobby,
         StartGame,
         JoinLobby,
-        CreateLobby
+        CreateLobby,
+        Resume,
+        MainMenu,
+        Restart
     }
 }

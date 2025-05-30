@@ -8,6 +8,8 @@ using Player;
 using Unity.Netcode;
 using Network;
 using Unity.Collections;
+using UI.Menu;
+using UI.Menu.States;
 
 namespace Level
 {
@@ -52,8 +54,13 @@ namespace Level
         // Referencias a los elementos de texto en el canvas
         private TextMeshProUGUI humansText;
         private TextMeshProUGUI zombiesText;
+        private TextMeshProUGUI coinsCollectedText;
         private TextMeshProUGUI gameModeText;
         private TextMeshProUGUI gameModeConditionValueText;
+
+
+        private string _humanWinText = "HUMANS WINS";
+        private string _zombieWinText = "ZOMBIES WINS";
 
         private int CoinsGenerated = 0;
 
@@ -88,6 +95,7 @@ namespace Level
                     // Buscar los TextMeshProUGUI llamados "HumansValue" y "ZombiesValue" dentro del Panel
                     Transform humansTextTransform = panel.Find("HumansValue");
                     Transform zombiesTextTransform = panel.Find("ZombiesValue");
+                    Transform coinsCollectedTextTransform = panel.Find("CoinsValue");
                     Transform gameModeTextTransform = panel.Find("GameMode");
                     Transform gameModeConditionTextTransform = panel.Find("GameModeConditionValue");
 
@@ -99,6 +107,11 @@ namespace Level
                     if (zombiesTextTransform != null)
                     {
                         zombiesText = zombiesTextTransform.GetComponent<TextMeshProUGUI>();
+                    }
+
+                    if (coinsCollectedTextTransform != null)
+                    {
+                        coinsCollectedText = coinsCollectedTextTransform.GetComponent<TextMeshProUGUI>();
                     }
 
                     if (gameModeTextTransform != null)
@@ -118,6 +131,8 @@ namespace Level
 
         private void Update()
         {
+            if (!IsSpawned) return;
+
             if (_gameOptions.gameMode == GameMode.Tiempo)
             {
                 // Lógica para el modo de juego basado en tiempo
@@ -129,11 +144,12 @@ namespace Level
                 HandleCoinBasedGameMode();
             }
 
+            UpdateCoinsCollected();
             UpdateTeamUI();
 
-            if (isGameOver)
+            if (IsHost && isGameOver)
             {
-                ShowGameOverPanel();
+                HumanWin();
             }
         }
 
@@ -145,6 +161,7 @@ namespace Level
             _gameManager = GameObject.FindWithTag("GameManager").GetComponent<GameManager>();
 
             _gameOptions = _gameManager.gameOptions.Value;
+            Debug.Log($"GAME OPTIONS IN LEVEL MANAGER: {_gameOptions.ToString()}");
 
             UpdateGameModeUI();
 
@@ -152,6 +169,9 @@ namespace Level
             {
                 GameInput.InputReader.Instance.onHumanConvert += OnHumanConvert;
                 GameInput.InputReader.Instance.onZombieConvert += OnZombieConvert;
+
+                numberOfHumans.OnValueChanged += CheckFinishByHumansSide;
+                numberOfZombies.OnValueChanged += CheckFinishByZombieSide;
 
                 GenerateTeams();
 
@@ -179,7 +199,7 @@ namespace Level
         {
             if (levelBuilder != null)
             {
-                levelBuilder.Build(seed);
+                levelBuilder.Build(seed, _gameOptions);
                 humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
                 zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
                 Debug.Log("SPAWN POINTS PICKED");
@@ -197,6 +217,7 @@ namespace Level
         private void SpawnMyPlayerObjectRpc(ulong clientId)
         {
             Debug.Log($"TP of the client {clientId} is in process");
+            Debug.Log($"NETWORK MANAGER: {NetworkManager.Singleton}");
             GameObject player = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject.gameObject;
             if (_humans.Contains(clientId))
             {
@@ -260,6 +281,12 @@ namespace Level
             }
         }
 
+        [Rpc(SendTo.NotServer)]
+        private void FinishGameInAllClientsRpc(FixedString64Bytes finalText)
+        {
+            MenuManager.Instance.SetState(new FinalScreen(false, finalText.ToString()));
+        }
+
         #endregion
 
         #region Team management methods
@@ -293,6 +320,42 @@ namespace Level
             Debug.Log($"nPlayers: {_gameManager.nPlayers.Value}");
             Debug.Log($"HUMANS: {_humans.Count}");
             Debug.Log($"ZOMBIES: {_zombies.Count}");
+        }
+
+        private void CheckFinishByZombieSide(int previousValue, int newValue)
+        {
+            if (newValue <= 0)
+            {
+                HumanWin();
+            }
+        }
+
+        private void HumanWin()
+        {
+            MenuManager.Instance.SetState(new FinalScreen(true, _humanWinText));
+            // Rpc for change the state in clients
+            FinishGameInAllClientsRpc(_humanWinText);
+        }
+
+        private void CheckFinishByHumansSide(int previousValue, int newValue)
+        {
+            if (newValue <= 0)
+            {
+                ZombieWin();
+            }
+        }
+
+        private void ZombieWin()
+        {
+            MenuManager.Instance.SetState(new FinalScreen(true, _zombieWinText));
+            // Rpc for change the state in clients
+            FinishGameInAllClientsRpc(_zombieWinText);
+        }
+
+        public void AbruptClientDisconnectUpdateLists(ulong clientId)
+        {
+            if (_humans.Remove(clientId)) numberOfHumans.Value--;
+            if (_zombies.Remove(clientId)) numberOfZombies.Value--;
         }
 
         private void OnZombieConvert()
@@ -339,6 +402,7 @@ namespace Level
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(zombiePrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
                 playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = true;    // Security
+                NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = playerNetObject;
 
                 // Set the camera in the player
                 var rpcParams = new RpcParams
@@ -414,6 +478,7 @@ namespace Level
                 playerNetObject = NetworkManager.SpawnManager.InstantiateAndSpawn(playerPrefab.GetComponent<NetworkObject>(), clientId, false, true, true, playerPosition, playerRotation);
                 playerNetObject.GetComponent<PlayerController>().playerName.Value = uniqueID;
                 playerNetObject.GetComponent<PlayerController>().isZombie = false;    // Security
+                NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = playerNetObject;
 
                 // Set the camera in the player
                 var rpcParams = new RpcParams
@@ -466,6 +531,7 @@ namespace Level
                 networkObject.GetComponent<PlayerController>().playerName.Value = name;
                 networkObject.GetComponent<PlayerController>().isZombie = true;    // Security
             }
+            NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject = networkObject;
             Debug.Log($"Spawn of a {((isHuman) ? "human" : "zombie")} that is the client {clientId} in the position {spawnPosition}");
             // Rpc for set the camera on the client that are this player
             var rpcParams = new RpcParams
@@ -543,6 +609,14 @@ namespace Level
                 gameModeConditionValueText.text = $"{minutesRemaining:D2}:{secondsRemaining:D2}";
             }
 
+        }
+
+        private void UpdateCoinsCollected()
+        {
+            if (coinsCollectedText != null)
+            {
+                coinsCollectedText.text = $"{coinsCollected.Value}";
+            }
         }
 
         public void CoinCollected(int coinId)

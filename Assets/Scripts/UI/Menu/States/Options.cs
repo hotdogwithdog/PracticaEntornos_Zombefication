@@ -5,7 +5,11 @@ namespace UI.Menu.States
 {
     internal class Options : AMenuState
     {
-        public Options() : base("Menus/Options") { }
+        private bool isMainMenu;
+        public Options(bool isMainMenu = true) : base("Menus/Options")
+        {
+            this.isMainMenu = isMainMenu;
+        }
 
         protected override void OnOptionClicked(MenuButtons option)
         {
@@ -22,7 +26,11 @@ namespace UI.Menu.States
 
         private void Back()
         {
-            MenuManager.Instance.SetState(new Main());
+            if (isMainMenu)
+            {
+                MenuManager.Instance.SetState(new Main());
+            }
+            else MenuManager.Instance.SetState(new Pause());
         }
 
         public override void Update(float deltaTime) { }

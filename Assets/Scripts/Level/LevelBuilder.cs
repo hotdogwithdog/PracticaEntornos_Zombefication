@@ -1,3 +1,4 @@
+using Network;
 using Player;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,21 +38,16 @@ namespace Level
         [Tooltip("Prefab para las monedas")]
         [SerializeField] private GameObject coinPrefab;
 
-        [Header("Room Settings")]
-        [Tooltip("Número total de salas")]
-        [SerializeField] private int numberOfRooms = 1;
+        private int numberOfRooms = 4;
 
-        [Tooltip("Ancho de cada sala")]
-        [SerializeField] private int roomWidth = 5;
+        private int roomWidth = 5;
 
-        [Tooltip("Largo de cada sala")]
-        [SerializeField] private int roomLength = 5;
+        private int roomLength = 5;
 
         [Tooltip("Densidad de elementos decorativos [%]")]
         [SerializeField] private float ítemsDensity = 20f;
 
-        [Tooltip("Densidad de monedas [%]")]
-        [SerializeField] private float coinsDensity = 20f;
+        private float _coinsDensity;
 
         private readonly float tileSize = 1.0f;
         private Transform roomParent;
@@ -74,8 +70,13 @@ namespace Level
 
         #region World building methods
 
-        public void Build(int seed)
+        public void Build(int seed, GameOptions options)
         {
+            _coinsDensity = options.coinsDensity;
+            roomLength = options.roomLenght;
+            roomWidth = options.roomWidth;
+            numberOfRooms = options.numberOfRooms;
+            Debug.Log($"GAME OPTIONS: {options.ToString()}");
             Random.InitState(seed);
             CreateRooms(roomWidth, roomLength, numberOfRooms);
         }
@@ -321,7 +322,7 @@ namespace Level
         private bool ShouldPlaceCoin()
         {
             float randomValue = Random.Range(0, 100);
-            return randomValue < coinsDensity;
+            return randomValue < _coinsDensity;
         }
 
         #endregion
